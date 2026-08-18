@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: Albercik Chatbot API
+  version: "0.1.0"
+  description: >
+    Single-tenant RAG customer-support API for Albertos. Public chat endpoint
+    requires no authentication; knowledge-base management endpoints require an
+    authenticated Administrator. See specs/001-albertos-rag-chatbot/spec.md
+    for the functional requirements this contract implements.
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: chat
+    description: Public chatbot endpoint (FR-001..FR-055 scope/cost rules apply)
+  - name: auth
+    description: Administrator authentication
+  - name: documents
+    description: Knowledge-base document management (Administrator only)
+  - name: health
+    description: Optional liveness endpoint
+
+paths:
+  /chat:
+    post:
+      tags: [chat]
+      summary: Ask the Albertos chatbot a question
+      description: >
+        Public endpoint. No authentication required (FR-002). Subject to
+        rate limiting, size limits, and cost/budget controls uniformly for
+        every requester, admin or public (FR-038, FR-044). The visitor
+        cannot influence model, tokens, retrieval Top-K, or system
+        instructions (FR-035).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: A grounded answer, an insufficient-information notice, or a scope-limited notice (FR-027).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          description: LLM usage disabled or budget exhausted; safe fallback returned instead of an error (FR-043, FR-044).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Administrator sign-in
+      description: >
+        Exchanges valid Administrator credentials for a bearer token
+        (research.md §1). Generic failure response on invalid credentials —
+        never reveals which field was wrong (FR-008).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /documents:
+    post:
+      tags: [documents]
+      summary: Upload a knowledge-base document
+      description: Administrator only (FR-004, FR-009..FR-013).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: UTF-8 .txt file.
+      responses:
+        '201':
+          description: Document accepted and queued for processing (chunking + embedding).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+    get:
+      tags: [documents]
+      summary: List uploaded knowledge-base documents
+      description: Administrator only (FR-014).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: All currently active (non-deleted) documents.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /documents/{document_id}:
+    delete:
+      tags: [documents]
+      summary: Delete a knowledge-base document
+      description: >
+        Administrator only (FR-015). Deletion excludes the document and its
+        chunks from retrieval immediately (FR-016, SC-007).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Document does not exist (or was already deleted); no further detail exposed (edge case in spec.md).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      tags: [health]
+      summary: Liveness check (optional per spec §22)
+      security: []
+      responses:
+        '200':
+          description: Service is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: Invalid request (validation failure, empty question, invalid file, etc.).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid authentication (FR-007, FR-008).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated but not permitted (should not occur in this MVP's single privilege tier, reserved for future use).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PayloadTooLarge:
+      description: Request or file exceeds the configured maximum size (FR-038, FR-010).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: Rate limit exceeded (FR-041). No provider call was made.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the next request may succeed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ChatRequest:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Polish-language question (FR-030a). Server-enforced max length (FR-038); this maxLength documents the configured MVP default.
+
+    SourceReference:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        label:
+          type: string
+          description: Human-readable label sufficient to trace the answer to its source document (FR-029), e.g. the original filename.
+
+    ChatResponse:
+      type: object
+      required: [outcome, answer]
+      properties:
+        outcome:
+          type: string
+          enum: [grounded, insufficient_information, out_of_scope, unavailable]
+          description: >
+            grounded = FR-027(a); insufficient_information = FR-027(b);
+            out_of_scope = FR-027(c); unavailable = FR-043/FR-044 safe
+            fallback (LLM disabled or budget exhausted).
+        answer:
+          type: string
+          description: Polish-language response text in every case (FR-030a).
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceReference'
+          description: Present only when outcome=grounded (FR-029).
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      required: [access_token, token_type]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+        expires_in:
+          type: integer
+          description: Seconds until the token expires.
+
+    DocumentSummary:
+      type: object
+      required: [id, filename, status, uploaded_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        status:
+          type: string
+          enum: [processing, ready, failed]
+        uploaded_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          description: Safe, user-facing message only — never a stack trace, credential, or internal config value (FR-049).

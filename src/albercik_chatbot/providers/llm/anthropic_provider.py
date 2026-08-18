@@ -1,0 +1,94 @@
+"""AnthropicLLMProvider — the only layer in the codebase that retries a
+provider call (Design Constraint 1, tasks.md).
+
+Bounded per research.md §7: at most `max_retries` retries (so
+`max_retries + 1` attempts total), exponential backoff, no retry on a 4xx
+(non-retryable/client) error. Returns exactly one `LLMResult` or raises
+exactly one `LLMProviderError` to its caller — `application/ask_question.py`
+MUST NOT wrap this in a further retry loop.
+"""
+
+import time
+from typing import Protocol as TypingProtocol
+
+from anthropic import Anthropic, APIConnectionError, APIStatusError, APITimeoutError
+
+from albercik_chatbot.providers.llm.protocol import LLMProviderError, LLMResult
+
+_BACKOFF_SECONDS = [0.5, 1.0]
+
+
+class _MessagesLike(TypingProtocol):
+    def create(self, **kwargs: object) -> object: ...
+
+
+class _AnthropicClientLike(TypingProtocol):
+    """The minimal shape this provider needs from an Anthropic client —
+    lets tests inject a fake transport (T018) without a real API key or
+    network access."""
+
+    @property
+    def messages(self) -> _MessagesLike: ...
+
+
+class AnthropicLLMProvider:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        max_retries: int,
+        timeout_seconds: float = 20.0,
+        client: _AnthropicClientLike | None = None,
+    ) -> None:
+        # `timeout_seconds` bounds each individual attempt inside the
+        # retry loop below (tasks.md T067) — a public request can never
+        # hang indefinitely on a stalled provider connection. A timeout is
+        # just another transient failure to the loop below (caught as
+        # `APITimeoutError`), retried like any other, bounded the same way.
+        self._client = (
+            client if client is not None else Anthropic(api_key=api_key, timeout=timeout_seconds)
+        )
+        self._model = model
+        self._max_retries = max_retries
+
+    def complete(self, *, system_prompt: str, user_message: str, max_tokens: int) -> LLMResult:
+        last_error: Exception | None = None
+
+        for attempt in range(self._max_retries + 1):
+            start = time.monotonic()
+            try:
+                response = self._client.messages.create(
+                    model=self._model,
+                    max_tokens=max_tokens,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": user_message}],
+                )
+            except APIStatusError as exc:
+                if 400 <= exc.status_code < 500:
+                    # Non-retryable: bad request, auth failure, etc.
+                    raise LLMProviderError(
+                        f"Anthropic request rejected (status {exc.status_code})"
+                    ) from exc
+                last_error = exc
+            except (APIConnectionError, APITimeoutError) as exc:
+                last_error = exc
+            else:
+                latency_ms = int((time.monotonic() - start) * 1000)
+                content = getattr(response, "content", [])
+                text = "".join(
+                    block.text for block in content if getattr(block, "type", None) == "text"
+                )
+                usage = getattr(response, "usage", None)
+                return LLMResult(
+                    text=text,
+                    model=getattr(response, "model", self._model),
+                    input_tokens=getattr(usage, "input_tokens", None) if usage else None,
+                    output_tokens=getattr(usage, "output_tokens", None) if usage else None,
+                    latency_ms=latency_ms,
+                )
+
+            if attempt < self._max_retries:
+                time.sleep(_BACKOFF_SECONDS[min(attempt, len(_BACKOFF_SECONDS) - 1)])
+
+        raise LLMProviderError("Anthropic provider failed after bounded retries") from last_error

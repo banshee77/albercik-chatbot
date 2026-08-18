@@ -1,0 +1,70 @@
+"""T043 — contract test: list shows uploaded documents; delete removes it
+from the list (FR-014-FR-016). Also covers the edge case of deleting an
+already-deleted/unknown document (safe 404, spec.md Edge Cases).
+"""
+
+import uuid
+
+import pytest
+
+from tests.fixtures.admin import seed_admin_and_token
+
+
+@pytest.mark.asyncio
+async def test_uploaded_document_appears_in_list_then_delete_removes_it(
+    db_async_client, db_session
+) -> None:
+    token = seed_admin_and_token(db_session)
+    headers = {"authorization": f"Bearer {token}"}
+
+    upload_response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("godziny.txt", b"Albertos jest czynny od 9 do 17.", "text/plain")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201
+    document_id = upload_response.json()["id"]
+    assert upload_response.json()["status"] == "ready"
+
+    list_response = await db_async_client.get("/api/v1/documents", headers=headers)
+    assert list_response.status_code == 200
+    assert any(doc["id"] == document_id for doc in list_response.json())
+
+    delete_response = await db_async_client.delete(
+        f"/api/v1/documents/{document_id}", headers=headers
+    )
+    assert delete_response.status_code == 204
+
+    list_after_delete = await db_async_client.get("/api/v1/documents", headers=headers)
+    assert all(doc["id"] != document_id for doc in list_after_delete.json())
+
+
+@pytest.mark.asyncio
+async def test_delete_unknown_document_returns_404(db_async_client, db_session) -> None:
+    token = seed_admin_and_token(db_session)
+
+    response = await db_async_client.delete(
+        f"/api/v1/documents/{uuid.uuid4()}", headers={"authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_already_deleted_document_returns_404(db_async_client, db_session) -> None:
+    token = seed_admin_and_token(db_session)
+    headers = {"authorization": f"Bearer {token}"}
+
+    upload_response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("x.txt", b"Tresc dokumentu.", "text/plain")},
+        headers=headers,
+    )
+    document_id = upload_response.json()["id"]
+    first_delete = await db_async_client.delete(f"/api/v1/documents/{document_id}", headers=headers)
+    assert first_delete.status_code == 204
+
+    second_delete = await db_async_client.delete(
+        f"/api/v1/documents/{document_id}", headers=headers
+    )
+    assert second_delete.status_code == 404

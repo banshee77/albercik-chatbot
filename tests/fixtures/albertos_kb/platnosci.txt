@@ -1,0 +1,13 @@
+Metody płatności w Albertos
+
+Sklep Albertos akceptuje kilka metod płatności za zamówienia złożone online. Dostępne są: płatność kartą płatniczą (Visa, Mastercard), szybki przelew online obsługiwany przez zewnętrznego operatora płatności, płatność BLIK oraz płatność za pobraniem przy odbiorze przesyłki od kuriera. Płatność za pobraniem wiąże się z dodatkową opłatą w wysokości 5 zł.
+
+Wszystkie płatności elektroniczne są przetwarzane przez certyfikowanego operatora płatności zgodnie z obowiązującymi standardami bezpieczeństwa. Albertos nie przechowuje numerów kart płatniczych klientów — dane karty są obsługiwane wyłącznie po stronie operatora płatności.
+
+Faktury i dokumenty sprzedaży
+
+Do każdego zamówienia klient otrzymuje potwierdzenie zakupu w formie elektronicznej, wysyłane na adres e-mail podany podczas składania zamówienia. Klienci prowadzący działalność gospodarczą mogą zaznaczyć w formularzu zamówienia opcję wystawienia faktury VAT, podając dane firmy. Faktura jest generowana automatycznie i dostępna do pobrania w panelu klienta w ciągu 24 godzin od nadania przesyłki.
+
+Raty i płatność odroczona
+
+Dla zamówień powyżej 500 zł Albertos oferuje możliwość zakupu na raty we współpracy z zewnętrznym dostawcą finansowania konsumenckiego. Decyzja o przyznaniu finansowania ratalnego zależy wyłącznie od operatora finansowego i wymaga przejścia oddzielnego procesu weryfikacji poza systemem Albertos.
