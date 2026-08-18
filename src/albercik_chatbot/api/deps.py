@@ -45,6 +45,21 @@ def get_embedding_provider(request: Request) -> EmbeddingProvider:
     return provider
 
 
+def get_llm_provider_name(request: Request) -> str:
+    """The active backend's name (`"anthropic"`/`"ollama"`), decided once
+    at composition time in `main.py::create_app()` — never re-derived or
+    branched-on here (feature 002-add-ollama-provider)."""
+    provider_name: str = request.app.state.llm_provider_name
+    return provider_name
+
+
+def get_llm_model_name(request: Request) -> str:
+    """The active backend's configured model name, decided once at
+    composition time in `main.py::create_app()`."""
+    model_name: str = request.app.state.llm_model_name
+    return model_name
+
+
 def get_chat_concurrency_guard(request: Request) -> ChatConcurrencyGuard:
     guard: ChatConcurrencyGuard = request.app.state.chat_concurrency_guard
     return guard

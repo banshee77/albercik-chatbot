@@ -45,7 +45,7 @@ from albercik_chatbot.domain.scope import is_albertos_scope
 from albercik_chatbot.infra.budget import check_llm_budget
 from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
 from albercik_chatbot.infra.rate_limit import check_and_increment
-from albercik_chatbot.persistence.models import ProviderKind, UsageRecord
+from albercik_chatbot.persistence.models import ProviderKind, ProviderName, UsageRecord
 from albercik_chatbot.persistence.repositories import search_similar_chunks
 from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
 from albercik_chatbot.providers.llm.protocol import LLMProvider, LLMProviderError
@@ -85,6 +85,7 @@ def _record_usage(
     *,
     request_id: uuid.UUID,
     provider_kind: ProviderKind,
+    provider_name: ProviderName,
     provider_model: str,
     input_tokens: int | None,
     output_tokens: int | None,
@@ -98,6 +99,7 @@ def _record_usage(
         UsageRecord(
             request_id=request_id,
             provider_kind=provider_kind,
+            provider_name=provider_name,
             provider_model=provider_model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -119,6 +121,7 @@ def ask_question(
     max_answer_tokens: int,
     embedding_model_name: str,
     llm_model_name: str,
+    llm_provider_name: str,
     safety: ChatSafetyConfig,
     rate_limit_source_key: str,
     concurrency_guard: ChatConcurrencyGuard,
@@ -135,6 +138,7 @@ def ask_question(
     budget_result = check_llm_budget(
         session,
         llm_enabled=safety.llm_enabled,
+        llm_provider_name=llm_provider_name,
         max_requests_per_hour=safety.budget_max_llm_requests_per_hour,
     )
     if not budget_result.allowed:
@@ -157,6 +161,11 @@ def ask_question(
             session,
             request_id=request_id,
             provider_kind=ProviderKind.embedding,
+            # Always the local sentence-transformers model, regardless of
+            # which LLM backend is configured — embeddings are not
+            # affected by LLM_PROVIDER at all (spec: "Do not add Ollama
+            # embeddings"; Design Constraint 3).
+            provider_name=ProviderName.local_sentence_transformer,
             provider_model=embedding_model_name,
             input_tokens=None,
             output_tokens=None,
@@ -193,6 +202,7 @@ def ask_question(
                 session,
                 request_id=request_id,
                 provider_kind=ProviderKind.llm,
+                provider_name=ProviderName(llm_provider_name),
                 provider_model=llm_model_name,
                 input_tokens=None,
                 output_tokens=None,
@@ -206,6 +216,7 @@ def ask_question(
             session,
             request_id=request_id,
             provider_kind=ProviderKind.llm,
+            provider_name=ProviderName(llm_provider_name),
             provider_model=result.model,
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,

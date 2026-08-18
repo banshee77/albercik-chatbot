@@ -10,12 +10,20 @@ This script deliberately does.
 Usage:
     uv run python scripts/run_eval.py [--base-url http://localhost:8000]
 
+Every printed report is labeled with the backend (`LLM_PROVIDER`) and
+model that were actually active for that run (research.md §7, feature
+002-add-ollama-provider, spec FR-016) — run this script once per backend
+(switching `LLM_PROVIDER` and restarting `app` between runs, no question-
+set changes) to produce two directly comparable, labeled reports.
+
 Prerequisites:
-- The `app` + `db` containers (or an equivalent local run) up, with a
-  real ANTHROPIC_API_KEY configured — otherwise every `grounded`-expected
-  question resolves to `unavailable` instead (LLM_ENABLED/budget/provider
-  behavior is unaffected by this script; it exercises the real pipeline
-  as a public caller would).
+- The `app` + `db` containers (or an equivalent local run) up. If
+  `LLM_PROVIDER=anthropic`, a real `ANTHROPIC_API_KEY` must also be
+  configured — otherwise every `grounded`-expected question resolves to
+  `unavailable` instead. The local Ollama backend (the default) needs no
+  API key (LLM_ENABLED/budget/provider behavior is unaffected by this
+  script either way; it exercises the real pipeline as a public caller
+  would).
 - `knowledge/*.txt` and `eval/questions.jsonl` present.
 
 Each run resets the knowledge base (deletes every existing document via
@@ -33,6 +41,8 @@ import time
 from pathlib import Path
 
 import httpx
+
+from albercik_chatbot.config import get_settings
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 KNOWLEDGE_DIR = REPO_ROOT / "knowledge"
@@ -94,6 +104,19 @@ def _reset_knowledge_base(client: httpx.Client, token: str) -> None:
         status = response.json()["status"]
         if status != "ready":
             print(f"WARNING: {path.name} uploaded with status={status!r}", file=sys.stderr)
+
+
+def _active_backend_label() -> str:
+    """Reads `LLM_PROVIDER` (and the corresponding model name) from the
+    same configuration the target app itself is expected to be running
+    with (research.md §7) — so two runs of this script, one per backend,
+    each print an unambiguous, backend-labeled report (spec FR-016). Never
+    prints anything else from `Settings` (no base URLs, no credentials),
+    mirroring `main.py`'s own startup log line.
+    """
+    settings = get_settings()
+    model = settings.OLLAMA_MODEL if settings.LLM_PROVIDER == "ollama" else settings.ANTHROPIC_MODEL
+    return f"{settings.LLM_PROVIDER} (model={model})"
 
 
 def _load_questions() -> list[dict]:
@@ -170,7 +193,8 @@ def _summarize(results: list[dict]) -> dict:
     }
 
 
-def _print_report(results: list[dict], summary: dict) -> None:
+def _print_report(results: list[dict], summary: dict, backend_label: str) -> None:
+    print(f"\n=== Eval run — backend: {backend_label} ===")
     print(f"\n{'ID':<4}{'Expected':<24}{'Actual':<24}{'':<6}{'ms':<7}Question")
     for r in results:
         mark = "OK" if r["passed"] else "FAIL"
@@ -215,6 +239,7 @@ def main() -> int:
     args = parser.parse_args()
 
     _ensure_eval_admin()
+    backend_label = _active_backend_label()
 
     with httpx.Client(base_url=args.base_url, timeout=30.0) as client:
         token = _login(client)
@@ -224,7 +249,7 @@ def main() -> int:
         results = _run_questions(client, questions)
 
     summary = _summarize(results)
-    _print_report(results, summary)
+    _print_report(results, summary, backend_label)
 
     return 0 if summary["passed"] == summary["total"] else 1
 

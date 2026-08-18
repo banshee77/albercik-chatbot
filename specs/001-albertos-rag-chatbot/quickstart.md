@@ -9,13 +9,22 @@ in `data-model.md`.
 - Docker + Docker Compose (runs the app, PostgreSQL + `pgvector`, and a
   separate test database — research.md §8).
 - `uv` (Python dependency management, per the constitution's approved stack).
-- An Anthropic API key for real (non-test) runs; automated tests never
-  require it (Principle XI). Embeddings run locally via `sentence-transformers`
+- An Anthropic API key **only if you select the Anthropic backend**
+  (`LLM_PROVIDER=anthropic`). The default LLM backend
+  (`LLM_PROVIDER=ollama`, unset also defaults here — feature
+  `002-add-ollama-provider`) is a locally-hosted model and needs no API
+  key at all for real runs; see
+  `specs/002-add-ollama-provider/quickstart.md` for the Ollama-specific
+  setup (automatic model provisioning, switching to Anthropic, etc.).
+  Automated tests never require an Anthropic key either way (Principle
+  XI). Embeddings run locally via `sentence-transformers`
   (`intfloat/multilingual-e5-small`, research.md §4) — **no embedding-provider
   API key of any kind is needed**, for tests or real runs.
-- Copy `.env.example` to `.env` and fill in `ANTHROPIC_API_KEY`,
-  `AUTH_JWT_SECRET`, and DB connection settings. Optionally override
-  `EMBEDDING_MODEL_NAME` (defaults to `intfloat/multilingual-e5-small`).
+- Copy `.env.example` to `.env` and fill in `AUTH_JWT_SECRET` and DB
+  connection settings. Fill in `ANTHROPIC_API_KEY` too only if you set
+  `LLM_PROVIDER=anthropic` — the default local Ollama backend needs none.
+  Optionally override `EMBEDDING_MODEL_NAME` (defaults to
+  `intfloat/multilingual-e5-small`).
 - First startup downloads the embedding model's weights (~470 MB) from the
   Hugging Face Hub if not already cached in the container image/volume —
   this requires outbound network access once, but is unrelated to any
@@ -105,7 +114,10 @@ for anything resembling a real deployment.
    exemption from rate limiting, the kill switch, or the budget
    (Clarifications session 2026-08-17, FR-038).
 5. Exhaust the configured hourly LLM budget (`BUDGET_MAX_LLM_REQUESTS_PER_HOUR`)
-   with real grounded requests, then ask one more.
+   with real grounded requests, then ask one more. This monetary budget
+   applies only when `LLM_PROVIDER=anthropic` is configured (feature
+   `002-add-ollama-provider`) — set that first, since the default local
+   Ollama backend is free and is never blocked by it.
    **Expected**: `503`, `outcome: "unavailable"`, no further Anthropic call —
    and confirm heavy embedding-only traffic (e.g. many uploads) alone never
    trips this, since the budget only counts `usage_records` rows with

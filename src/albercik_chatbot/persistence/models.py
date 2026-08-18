@@ -49,6 +49,22 @@ class ProviderKind(enum.StrEnum):
     embedding = "embedding"
 
 
+class ProviderName(enum.StrEnum):
+    """Which concrete backend served a `UsageRecord` row — orthogonal to
+    `ProviderKind` (feature 002-add-ollama-provider, data-model.md). Always
+    populated, including on `embedding`-kind rows (today always the local
+    `sentence-transformers` model, `local_sentence_transformer` — never
+    `anthropic`/`ollama`, which are `llm`-kind-only values). Never inferred
+    from `provider_model`'s free-text value — set explicitly by the caller
+    from its own known-active backend, so `infra/budget.py`'s
+    `provider_name='anthropic'` filter is a structural guarantee, not a
+    string-matching heuristic (research.md §4)."""
+
+    anthropic = "anthropic"
+    ollama = "ollama"
+    local_sentence_transformer = "local_sentence_transformer"
+
+
 class Administrator(Base):
     __tablename__ = "administrators"
 
@@ -130,6 +146,15 @@ class UsageRecord(Base):
     request_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     provider_kind: Mapped[ProviderKind] = mapped_column(
         Enum(ProviderKind, name="provider_kind", values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+    )
+    # NOT NULL from the start in this model definition — safe for a fresh
+    # schema (`Base.metadata.create_all`, used by every test). The
+    # corresponding Alembic migration against a database that may already
+    # hold historical rows backfills deterministically before adding this
+    # constraint (see alembic/versions/, data-model.md Migration).
+    provider_name: Mapped[ProviderName] = mapped_column(
+        Enum(ProviderName, name="provider_name", values_callable=lambda e: [m.value for m in e]),
         nullable=False,
     )
     provider_model: Mapped[str] = mapped_column(String, nullable=False)

@@ -33,6 +33,61 @@ services:
       timeout: 5s
       retries: 10
 
+  # Local LLM backend (feature 002-add-ollama-provider, research.md §6).
+  # Deliberately NO `ports:` mapping — reachable only over this internal
+  # Compose network, at http://ollama:11434 (the OLLAMA_BASE_URL default),
+  # never exposed to the host or the public internet (spec FR-008). Part
+  # of the default `docker compose up` set, not gated behind a profile:
+  # LLM_PROVIDER defaults to `ollama`, so a plain `docker compose up -d`
+  # must actually have a working backend to talk to. The configured model
+  # is provisioned automatically by the `ollama-init` service below — no
+  # manual `ollama pull` command required (research.md §6a). To use a
+  # host-run Ollama instance instead, leave this service running unused
+  # and point OLLAMA_BASE_URL at the host (e.g.
+  # http://host.docker.internal:11434 on Docker Desktop/WSL2).
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot model provisioning (feature 002-add-ollama-provider User Story
+  # 4, research.md §6a). Reuses the `ollama` image's own CLI rather than a
+  # separate image; `restart: "no"` and `depends_on: ollama:
+  # service_healthy` + `app`'s `depends_on: ollama-init:
+  # service_completed_successfully` together give "run once, then never
+  # again unless explicitly re-run" and "app never starts until the model
+  # is ready" for free from Compose's own primitives. `ollama pull` is
+  # natively idempotent, so a restart with the model already present in
+  # the `ollama-data` volume completes almost immediately rather than
+  # re-downloading. Skips the pull entirely (exit 0, no network call) when
+  # LLM_PROVIDER isn't `ollama`, so an Anthropic-only deployment is never
+  # forced to download a local model just to start.
+  ollama-init:
+    image: ollama/ollama:latest
+    restart: "no"
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ "$$LLM_PROVIDER" != "ollama" ]; then
+          echo "LLM_PROVIDER=$$LLM_PROVIDER — skipping Ollama model provisioning."
+          exit 0
+        fi
+        echo "Ensuring Ollama model '$$OLLAMA_MODEL' is available..."
+        exec ollama pull "$$OLLAMA_MODEL"
+
   # Single application service. Embeddings run in-process via
   # sentence-transformers (research.md §4/§4a) — there is deliberately no
   # separate embedding-service container.
@@ -48,6 +103,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
 
 volumes:
   db-data:
+  ollama-data:

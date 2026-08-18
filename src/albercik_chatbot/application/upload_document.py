@@ -30,6 +30,7 @@ from albercik_chatbot.persistence.models import (
     DocumentStatus,
     KnowledgeDocument,
     ProviderKind,
+    ProviderName,
     UsageRecord,
 )
 from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
@@ -99,6 +100,10 @@ def upload_document(
             UsageRecord(
                 request_id=uuid.uuid4(),
                 provider_kind=ProviderKind.embedding,
+                # Always the local sentence-transformers model — ingestion
+                # embedding is unaffected by LLM_PROVIDER (Design
+                # Constraint 3; feature 002-add-ollama-provider).
+                provider_name=ProviderName.local_sentence_transformer,
                 provider_model=embedding_model_name,
                 input_tokens=None,
                 output_tokens=None,

@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -22,6 +22,26 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-sonnet-4-5"
     LLM_ENABLED: bool = True
+
+    # --- LLM provider selection (feature 002-add-ollama-provider) ---
+    # Server-side only — never derived from request content (Clarifications
+    # session, 2026-08-18; spec FR-002). Defaults to `ollama` so a fresh
+    # deployment works with zero paid-API setup; anyone who wants the paid
+    # provider (including an existing Anthropic-only deployment upgrading
+    # into this feature) must set this explicitly (spec FR-003).
+    LLM_PROVIDER: Literal["anthropic", "ollama"] = "ollama"
+
+    # --- Ollama provider (research.md §2, §3, §6) ---
+    # Internal Docker network address by default — this deployment's
+    # `docker-compose.yml` never publishes Ollama's port; only the `app`
+    # service can reach it (spec FR-008).
+    OLLAMA_BASE_URL: str = "http://ollama:11434"
+    # Never hardcoded in application/domain logic (spec FR-006).
+    OLLAMA_MODEL: str = "qwen3:4b"
+    # Independent from PROVIDER_TIMEOUT_SECONDS (Anthropic's) — local
+    # CPU-hosted inference of even a small model is expected to be slower
+    # than the hosted API, so this defaults more generously.
+    OLLAMA_TIMEOUT_SECONDS: float = 60.0
 
     # --- Embedding provider (local, sentence-transformers — research.md §4/§4a) ---
     EMBEDDING_MODEL_NAME: str = "intfloat/multilingual-e5-small"

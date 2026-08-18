@@ -30,7 +30,9 @@ from sqlalchemy.orm import Session
 from albercik_chatbot.api.deps import (
     get_chat_concurrency_guard,
     get_embedding_provider,
+    get_llm_model_name,
     get_llm_provider,
+    get_llm_provider_name,
     require_bounded_request_body,
 )
 from albercik_chatbot.api.schemas import ChatRequest, ChatResponse, SourceReferenceOut
@@ -56,6 +58,8 @@ def post_chat(
     llm_provider: LLMProvider = Depends(get_llm_provider),
     embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
     concurrency_guard: ChatConcurrencyGuard = Depends(get_chat_concurrency_guard),
+    llm_provider_name: str = Depends(get_llm_provider_name),
+    llm_model_name: str = Depends(get_llm_model_name),
 ) -> ChatResponse:
     settings = get_settings()
     source_key = resolve_client_ip(request, trusted_proxy_count=settings.TRUSTED_PROXY_COUNT)
@@ -74,7 +78,8 @@ def post_chat(
         relevance_threshold=settings.RETRIEVAL_RELEVANCE_THRESHOLD,
         max_answer_tokens=settings.LLM_MAX_ANSWER_TOKENS,
         embedding_model_name=settings.EMBEDDING_MODEL_NAME,
-        llm_model_name=settings.ANTHROPIC_MODEL,
+        llm_model_name=llm_model_name,
+        llm_provider_name=llm_provider_name,
         safety=safety,
         rate_limit_source_key=source_key,
         concurrency_guard=concurrency_guard,

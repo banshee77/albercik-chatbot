@@ -11,9 +11,10 @@ import uuid
 import pytest
 
 from albercik_chatbot.config import get_settings
-from albercik_chatbot.persistence.models import ProviderKind, UsageRecord
+from albercik_chatbot.persistence.models import ProviderKind, ProviderName, UsageRecord
 from tests.fixtures.admin import seed_admin_and_token
 from tests.fixtures.prompt_injection import VISITOR_INJECTION_MESSAGES
+from tests.fixtures.provider_app import build_app, client_for
 
 _INJECTION_MESSAGE = VISITOR_INJECTION_MESSAGES[0]
 
@@ -53,14 +54,20 @@ async def test_kill_switch_still_applies_to_injection_attempts(
 
 @pytest.mark.asyncio
 async def test_budget_exhaustion_still_applies_to_injection_attempts(
-    db_async_client, db_session, fake_llm_provider, monkeypatch
+    db_session, fake_llm_provider, fake_embedding_provider, monkeypatch
 ) -> None:
+    # Budget-behavior correction: the Anthropic monetary budget only
+    # applies to the Anthropic backend, so this must configure it
+    # explicitly rather than relying on the (now Ollama-default) test app.
     monkeypatch.setenv("BUDGET_MAX_LLM_REQUESTS_PER_HOUR", "1")
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     get_settings.cache_clear()
     db_session.add(
         UsageRecord(
             request_id=uuid.uuid4(),
             provider_kind=ProviderKind.llm,
+            provider_name=ProviderName.anthropic,
             provider_model="claude-sonnet-4-5",
             input_tokens=10,
             output_tokens=5,
@@ -70,7 +77,13 @@ async def test_budget_exhaustion_still_applies_to_injection_attempts(
     )
     db_session.flush()
 
-    response = await db_async_client.post("/api/v1/chat", json={"question": _INJECTION_MESSAGE})
+    app = build_app(
+        llm_provider=fake_llm_provider,
+        embedding_provider=fake_embedding_provider,
+        db_session=db_session,
+    )
+    async with client_for(app) as client:
+        response = await client.post("/api/v1/chat", json={"question": _INJECTION_MESSAGE})
 
     get_settings.cache_clear()
 
