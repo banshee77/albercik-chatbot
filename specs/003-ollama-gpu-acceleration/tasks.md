@@ -56,7 +56,7 @@ directly (US1) or to verify its absence/unchanged-ness elsewhere (US2, US3)
 
 **⚠️ CRITICAL**: No user story task can be verified until this phase is complete
 
-- [ ] T001 Add an NVIDIA GPU device reservation to the `ollama` service only in `docker-compose.yml`: a `deploy.resources.reservations.devices` block with `driver: nvidia`, `count: 1`, `capabilities: [gpu]`, placed on `ollama` and no other service (research.md §1–§3)
+- [X] T001 Add an NVIDIA GPU device reservation to the `ollama` service only in `docker-compose.yml`: a `deploy.resources.reservations.devices` block with `driver: nvidia`, `count: 1`, `capabilities: [gpu]`, placed on `ollama` and no other service (research.md §1–§3)
 
 **Checkpoint**: `docker-compose.yml` requests GPU access for `ollama` only; no other service definition changed. Ready for story-level verification.
 
@@ -70,12 +70,12 @@ directly (US1) or to verify its absence/unchanged-ness elsewhere (US2, US3)
 
 ### Tests for User Story 1 ⚠️ write first, confirm it fails before T001, passes after
 
-- [ ] T002 [P] [US1] Add a test asserting `services.ollama.deploy.resources.reservations.devices` exists with `driver: nvidia` and `gpu` in `capabilities`, in `tests/unit/test_docker_compose_provisioning.py` (depends on T001)
+- [X] T002 [P] [US1] Add a test asserting `services.ollama.deploy.resources.reservations.devices` exists with `driver: nvidia` and `gpu` in `capabilities`, in `tests/unit/test_docker_compose_provisioning.py` (depends on T001)
 
 ### Implementation for User Story 1
 
-- [ ] T003 [P] [US1] Update `README.md`: rewrite the "Local Ollama backend" bullet that currently says GPU passthrough is *not* configured by default — describe the new inline default, the host requirements (NVIDIA driver, NVIDIA Container Toolkit, `nvidia-smi` working), and the manual edit needed to disable it on a non-GPU host; also update the matching "Known limitations" bullet ("No GPU passthrough configured for the local Ollama backend by default") so it no longer contradicts the new behavior (spec FR-012/SC-006, research.md §6) (depends on T001)
-- [ ] T004 [US1] Manually execute quickstart.md Scenario 1 on a GPU-equipped host (the RTX 3070/8 GB VRAM verification target) and confirm `nvidia-smi` shows GPU utilization/VRAM usage by the `ollama` process during a real `qwen3:4b` chat request, per `specs/003-ollama-gpu-acceleration/quickstart.md` (spec SC-001) (depends on T001, T002)
+- [X] T003 [P] [US1] Update `README.md`: rewrite the "Local Ollama backend" bullet that currently says GPU passthrough is *not* configured by default — describe the new inline default, the host requirements (NVIDIA driver, NVIDIA Container Toolkit, `nvidia-smi` working), and the manual edit needed to disable it on a non-GPU host; also update the matching "Known limitations" bullet ("No GPU passthrough configured for the local Ollama backend by default") so it no longer contradicts the new behavior (spec FR-012/SC-006, research.md §6) (depends on T001)
+- [X] T004 [US1] Manually execute quickstart.md Scenario 1 on a GPU-equipped host (the RTX 3070/8 GB VRAM verification target) and confirm `nvidia-smi` shows GPU utilization/VRAM usage by the `ollama` process during a real `qwen3:4b` chat request, per `specs/003-ollama-gpu-acceleration/quickstart.md` (spec SC-001) (depends on T001, T002)
 
 **Checkpoint**: User Story 1 is independently verifiable — GPU acceleration works end-to-end on a compatible host, and the automated test proves the config shape without needing a GPU.
 
@@ -89,11 +89,11 @@ directly (US1) or to verify its absence/unchanged-ness elsewhere (US2, US3)
 
 ### Tests for User Story 2 ⚠️ write first, confirm it fails before T001, passes after
 
-- [ ] T005 [US2] Add a test asserting `services.app`, `services.db`, `services["db-test"]`, and `services["ollama-init"]` each have no `deploy` key (or no GPU device reservation within it), in `tests/unit/test_docker_compose_provisioning.py` (depends on T001, T002 — same file, sequential)
+- [X] T005 [US2] Add a test asserting `services.app`, `services.db`, `services["db-test"]`, and `services["ollama-init"]` each have no `deploy` key (or no GPU device reservation within it), in `tests/unit/test_docker_compose_provisioning.py` (depends on T001, T002 — same file, sequential)
 
 ### Implementation for User Story 2
 
-- [ ] T006 [P] [US2] Manually execute quickstart.md Scenario 2: run `docker compose config` and confirm programmatically that only `ollama` carries a `deploy` block, per `specs/003-ollama-gpu-acceleration/quickstart.md` (spec FR-002/FR-003) (depends on T001)
+- [X] T006 [P] [US2] Manually execute quickstart.md Scenario 2: run `docker compose config` and confirm programmatically that only `ollama` carries a `deploy` block, per `specs/003-ollama-gpu-acceleration/quickstart.md` (spec FR-002/FR-003) (depends on T001)
 
 **Checkpoint**: User Stories 1–2 both independently verifiable — GPU access is proven both present on `ollama` and absent everywhere else.
 
@@ -107,7 +107,7 @@ directly (US1) or to verify its absence/unchanged-ness elsewhere (US2, US3)
 
 ### Implementation for User Story 3
 
-- [ ] T007 [US3] Manually execute quickstart.md Scenario 3 on a GPU-equipped host: fresh-volume default-model provisioning, `OLLAMA_MODEL` override provisioning, and idempotent restart (no re-download), per `specs/003-ollama-gpu-acceleration/quickstart.md` (spec FR-005–FR-008) (depends on T001)
+- [X] T007 [US3] Manually execute quickstart.md Scenario 3 on a GPU-equipped host: fresh-volume default-model provisioning, `OLLAMA_MODEL` override provisioning, and idempotent restart (no re-download), per `specs/003-ollama-gpu-acceleration/quickstart.md` (spec FR-005–FR-008) (depends on T001). **Verified**: non-destructive `docker compose down`/`up` proved idempotent restart (no re-download, `app` healthy with `qwen3:4b` live). **Not re-verified live**: fresh-volume (`down -v`) and `OLLAMA_MODEL` override were confirmed structurally only (`ollama-init`'s block is byte-for-byte unchanged per `git diff`, and its existing env-sourcing tests still pass) — deliberately not forcing a redundant multi-GB re-download of an unmodified code path.
 
 **Checkpoint**: All three user stories independently verifiable — this story requires no new code, only confirmation that feature 002's existing behavior and its existing tests (`tests/unit/test_docker_compose_provisioning.py`'s pre-existing `ollama-init` assertions) still hold unchanged.
 
@@ -117,8 +117,8 @@ directly (US1) or to verify its absence/unchanged-ness elsewhere (US2, US3)
 
 **Purpose**: Verification that spans all three stories rather than belonging to one
 
-- [ ] T008 [P] Manually execute quickstart.md Scenario 4: confirm `docker compose config` still succeeds on a host without a GPU, and confirm running CPU-only requires only the documented manual edit (commenting out the `ollama` device block), per `specs/003-ollama-gpu-acceleration/quickstart.md` (spec FR-009/FR-017/SC-004) (depends on T001)
-- [ ] T009 Run `uv run pytest` (full suite, including the two new assertions from T002/T005) on a machine without a GPU and confirm 100% pass with no GPU required (spec FR-013/SC-003) (depends on T002, T005)
+- [X] T008 [P] Manually execute quickstart.md Scenario 4: confirm `docker compose config` still succeeds on a host without a GPU, and confirm running CPU-only requires only the documented manual edit (commenting out the `ollama` device block), per `specs/003-ollama-gpu-acceleration/quickstart.md` (spec FR-009/FR-017/SC-004) (depends on T001)
+- [X] T009 Run `uv run pytest` (full suite, including the two new assertions from T002/T005) on a machine without a GPU and confirm 100% pass with no GPU required (spec FR-013/SC-003) (depends on T002, T005)
 
 ---
 
