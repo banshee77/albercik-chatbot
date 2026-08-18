@@ -3,6 +3,7 @@ Constraint 1, tasks.md): bounded to `max_retries + 1` total attempts, and
 returns exactly one outcome (success or LLMProviderError) to its caller.
 """
 
+import logging
 from unittest.mock import patch
 
 import httpx
@@ -158,3 +159,49 @@ def test_configured_timeout_is_passed_to_the_anthropic_client() -> None:
         )
 
     mock_client_cls.assert_called_once_with(api_key="unused", timeout=7.5)
+
+
+def test_non_retryable_4xx_failure_is_logged_server_side(caplog) -> None:
+    """Previously silent: a real (non-retryable) provider rejection — e.g.
+    an exhausted Anthropic billing balance, seen live during manual
+    evaluation — produced no log line anywhere, making it undiagnosable
+    from the outside (the client only ever sees the generic `unavailable`
+    outcome, by design). This must be logged server-side (never exposed to
+    the client) so an operator can tell *why* `/chat` is failing."""
+    transport = _AlwaysFail4xx()
+    provider = AnthropicLLMProvider(
+        api_key="unused", model="claude-fake", max_retries=2, client=transport
+    )
+
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(LLMProviderError):
+            provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
+
+    assert len(caplog.records) == 1
+    assert "400" in caplog.records[0].message
+
+
+def test_retry_exhausted_failure_is_logged_server_side(caplog) -> None:
+    transport = _AlwaysFailTransient()
+    provider = AnthropicLLMProvider(
+        api_key="unused", model="claude-fake", max_retries=2, client=transport
+    )
+
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(LLMProviderError):
+            provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
+
+    assert len(caplog.records) == 1
+    assert "APIConnectionError" in caplog.records[0].message
+
+
+def test_successful_call_logs_nothing(caplog) -> None:
+    transport = _FailNTimesThenSucceed(fail_count=0)
+    provider = AnthropicLLMProvider(
+        api_key="unused", model="claude-fake", max_retries=2, client=transport
+    )
+
+    with caplog.at_level(logging.WARNING):
+        provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
+
+    assert caplog.records == []

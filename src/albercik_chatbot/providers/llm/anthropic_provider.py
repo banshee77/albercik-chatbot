@@ -13,7 +13,10 @@ from typing import Protocol as TypingProtocol
 
 from anthropic import Anthropic, APIConnectionError, APIStatusError, APITimeoutError
 
+from albercik_chatbot.infra.logging import get_logger
 from albercik_chatbot.providers.llm.protocol import LLMProviderError, LLMResult
+
+logger = get_logger(__name__)
 
 _BACKOFF_SECONDS = [0.5, 1.0]
 
@@ -66,7 +69,15 @@ class AnthropicLLMProvider:
                 )
             except APIStatusError as exc:
                 if 400 <= exc.status_code < 500:
-                    # Non-retryable: bad request, auth failure, etc.
+                    # Non-retryable: bad request, auth failure, exhausted
+                    # billing balance, etc. Logged server-side only — the
+                    # client only ever sees the generic `unavailable`
+                    # outcome (FR-050); `str(exc)` is Anthropic's own
+                    # error text, safe to log (never echoes back our API
+                    # key/headers/prompt content).
+                    logger.warning(
+                        "Anthropic request rejected (status=%s): %s", exc.status_code, exc
+                    )
                     raise LLMProviderError(
                         f"Anthropic request rejected (status {exc.status_code})"
                     ) from exc
@@ -91,4 +102,10 @@ class AnthropicLLMProvider:
             if attempt < self._max_retries:
                 time.sleep(_BACKOFF_SECONDS[min(attempt, len(_BACKOFF_SECONDS) - 1)])
 
+        logger.warning(
+            "Anthropic provider failed after %d attempt(s), last error: %s: %s",
+            self._max_retries + 1,
+            type(last_error).__name__,
+            last_error,
+        )
         raise LLMProviderError("Anthropic provider failed after bounded retries") from last_error
