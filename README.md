@@ -71,12 +71,49 @@ treating it as production-ready.
   is only lost if that volume is explicitly removed (`docker compose down
   -v`), at which point the model is downloaded again automatically on the
   next startup.
-- GPU acceleration for the `ollama` service is supported by Ollama itself,
-  but **no GPU passthrough is configured in `docker-compose.yml` by
-  default** — the container runs CPU-only unless an operator adds the
-  relevant `deploy.resources.reservations.devices` block to the `ollama`
-  service themselves (never to `ollama-init` or `app`, which do not run
-  inference).
+- **NVIDIA GPU acceleration is optional for deployment, but is enabled in
+  this repo's `docker-compose.yml` by default** for the `ollama` service
+  only (feature 003-ollama-gpu-acceleration) — a
+  `deploy.resources.reservations.devices` block requesting one `nvidia`
+  GPU. `ollama-init` and `app` never receive GPU access; they don't run
+  inference. **Host requirements** (WSL2 or native Linux): a supported
+  NVIDIA GPU, an installed NVIDIA driver, and the NVIDIA Container Toolkit
+  configured for Docker. On WSL2 specifically, the NVIDIA driver is
+  installed on the *Windows* host only — do not install a Linux NVIDIA
+  driver inside the WSL2 distro; install the NVIDIA Container Toolkit
+  inside the distro as usual. **Before assuming GPU acceleration is
+  available, verify it — don't take it on faith:**
+  1. `nvidia-smi` on the host must succeed and list your GPU.
+  2. `docker compose up -d ollama` must report the container healthy
+     (`docker compose ps ollama`) — if the host doesn't meet the
+     prerequisites above, this step fails instead, which is expected
+     (see CPU-only fallback below).
+  3. `docker exec <ollama-container> nvidia-smi` must succeed *inside* the
+     container — this is the actual proof the container received the
+     device, not just that the host has one.
+  4. While a real chat request is in flight, `nvidia-smi` on the host
+     should show GPU utilization/VRAM usage attributable to the `ollama`
+     process. Only report GPU acceleration as working once you've seen
+     this — don't claim it from configuration alone.
+
+  Validated against an NVIDIA RTX 3070 (8 GB VRAM) with `qwen3:4b`, the
+  default model.
+  **CPU-only fallback**: on a host without those prerequisites,
+  `docker compose up` fails to start `ollama` until you comment out or
+  remove the `deploy:` block under the `ollama` service in
+  `docker-compose.yml` — this is a manual edit; nothing auto-detects GPU
+  presence. `docker compose config` itself always succeeds regardless of
+  GPU presence, since it only validates syntax, not hardware.
+  **Stale cached image**: if your locally cached `ollama/ollama:latest`
+  image predates support for the configured model (symptom: `ollama-init`
+  logs an error like "pull model manifest: ... requires a newer version of
+  Ollama"), refresh it and recreate the container —
+  `docker pull ollama/ollama:latest` followed by
+  `docker compose up -d ollama --force-recreate` — then retry. This is an
+  operational/documentation note only; the project does not add any
+  automatic image-pulling logic. See
+  `specs/003-ollama-gpu-acceleration/quickstart.md` for step-by-step
+  verification.
 
 ## Quickstart
 
@@ -158,10 +195,13 @@ This is an MVP, not a production deployment. Explicitly not solved yet:
   reranker, or hybrid search — validate against real Albertos content
   first.
 - **No frontend/chat widget yet.** `/api/v1/chat` is a JSON API only.
-- **No GPU passthrough configured for the local Ollama backend by
-  default.** `docker-compose.yml`'s `ollama` service runs CPU-only unless
-  an operator adds GPU device reservation themselves — see "Local Ollama
-  backend" above.
+- **GPU passthrough requires host prerequisites the project doesn't
+  install for you.** `docker-compose.yml`'s `ollama` service requests an
+  NVIDIA GPU by default (feature 003-ollama-gpu-acceleration); on a host
+  without a working NVIDIA driver + Container Toolkit, `ollama` (and, by
+  the existing `depends_on` chain, `ollama-init`/`app` too) will fail to
+  start until you manually remove that service's `deploy:` block — see
+  "Local Ollama backend" above.
 
 ## Repository layout
 

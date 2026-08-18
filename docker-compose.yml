@@ -45,9 +45,25 @@ services:
   # host-run Ollama instance instead, leave this service running unused
   # and point OLLAMA_BASE_URL at the host (e.g.
   # http://host.docker.internal:11434 on Docker Desktop/WSL2).
+  #
+  # GPU passthrough (feature 003-ollama-gpu-acceleration, research.md §1-§3):
+  # NVIDIA GPU access is requested for this service only, via Compose's
+  # native (non-Swarm) `deploy.resources.reservations.devices` mechanism —
+  # never `ollama-init` or `app`, which never run inference. On a host
+  # without a working NVIDIA driver/Container Toolkit, `docker compose up`
+  # will fail to start this service; comment out or remove the `deploy`
+  # block below to run CPU-only (spec FR-016/FR-017 — deliberately manual,
+  # no auto-detection).
   ollama:
     image: ollama/ollama:latest
     restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:

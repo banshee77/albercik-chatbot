@@ -110,3 +110,34 @@ def test_app_waits_for_both_db_and_ollama_init() -> None:
 
     assert depends_on["db"]["condition"] == "service_healthy"
     assert depends_on["ollama-init"]["condition"] == "service_completed_successfully"
+
+
+# T002 (US1, feature 003-ollama-gpu-acceleration) — proves the *shape* of
+# the NVIDIA GPU device reservation on `ollama` (spec FR-001, research.md
+# §1-§2). No Docker daemon, no GPU, no `docker compose` CLI call.
+
+
+def test_ollama_service_requests_an_nvidia_gpu() -> None:
+    services = _load_services()
+    devices = services["ollama"]["deploy"]["resources"]["reservations"]["devices"]
+
+    assert any(
+        device.get("driver") == "nvidia" and "gpu" in device.get("capabilities", [])
+        for device in devices
+    )
+
+
+# T005 (US2, feature 003-ollama-gpu-acceleration) — proves GPU access is
+# isolated to `ollama`: `app`, `db`, `db-test`, and `ollama-init` must never
+# declare a `deploy`/GPU device reservation of their own (spec FR-002/
+# FR-003, research.md §3). Same zero-dependency PyYAML parsing as above.
+
+
+def test_only_ollama_has_a_gpu_device_reservation() -> None:
+    services = _load_services()
+
+    for name in ("app", "db", "db-test", "ollama-init"):
+        assert "deploy" not in services[name], (
+            f"{name} unexpectedly declares a 'deploy' block — GPU access must "
+            "stay limited to the ollama service"
+        )
