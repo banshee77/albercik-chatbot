@@ -23,7 +23,10 @@ import create_app` in conftest.py — never has the side effect of
 constructing real providers.
 """
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from albercik_chatbot.api.errors import register_exception_handlers
 from albercik_chatbot.api.routers import auth, chat, documents, health
@@ -37,6 +40,9 @@ from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
 from albercik_chatbot.providers.llm.anthropic_provider import AnthropicLLMProvider
 from albercik_chatbot.providers.llm.ollama_provider import OllamaLLMProvider
 from albercik_chatbot.providers.llm.protocol import LLMProvider
+from albercik_chatbot.public_site.router import router as public_site_router
+
+_PUBLIC_SITE_STATIC_DIR = Path(__file__).resolve().parent / "public_site" / "static"
 
 logger = get_logger(__name__)
 
@@ -108,5 +114,16 @@ def create_app(
     app.include_router(chat.router)
     app.include_router(auth.router)
     app.include_router(documents.router)
+
+    # Public, unauthenticated website (feature 005-public-club-website) —
+    # purely additive: no existing route, contract, or behavior above this
+    # line is touched. Registered last so it can never shadow an existing
+    # route (Starlette matches in registration order).
+    app.include_router(public_site_router)
+    app.mount(
+        "/static/site",
+        StaticFiles(directory=str(_PUBLIC_SITE_STATIC_DIR)),
+        name="public_site_static",
+    )
 
     return app

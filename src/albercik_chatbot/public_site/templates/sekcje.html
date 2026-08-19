@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Sekcje — ALBERTOS{% endblock %}
+
+{% block content %}
+<h1>Nasze sekcje</h1>
+<p>Treningi ALBERTOS odbywają się w kilku lokalizacjach — wybierz tę najbliższą Tobie.</p>
+
+<div class="card-grid">
+  {% for location in locations %}
+  <article class="card location-card">
+    <h2>{{ location.name }}</h2>
+    <p>{{ location.address }}</p>
+    <p><strong>Grupy:</strong> {{ location.groups | join(", ") }}</p>
+    <p><strong>Poziom:</strong> {{ location.age_level }}</p>
+    <p><strong>Dni i godziny:</strong> {{ location.days_hours }}</p>
+    <p><strong>Instruktor:</strong>
+      <a href="/trenerzy#{{ location.trainer_slug }}">{{ trainer_names[location.trainer_slug] }}</a>
+    </p>
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

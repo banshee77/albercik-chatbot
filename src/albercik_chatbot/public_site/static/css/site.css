@@ -1,0 +1,368 @@
+/* ALBERTOS public website — design tokens & base layout
+   (feature 005-public-club-website, research.md §6, §8).
+   A restrained Japanese design language: natural-feeling palette, generous
+   negative space, one sparing accent — never a repeating decorative motif. */
+
+:root {
+  --ink: #1a1a1a;
+  --paper: #f5f2ec;
+  --paper-raised: #ffffff;
+  --indigo: #22314f;
+  --indigo-deep: #16213a;
+  --accent: #b3382c;
+  --muted: #6b6a66;
+  --line: #d9d4c8;
+
+  --font-heading: "Iowan Old Style", "Palatino Linotype", Georgia, "Noto Serif", serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2.5rem;
+  --space-5: 4rem;
+
+  --radius: 2px;
+  --content-max: 72rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 var(--space-2);
+}
+
+p {
+  margin: 0 0 var(--space-2);
+}
+
+a {
+  color: var(--indigo);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--indigo);
+  color: #fff;
+  padding: var(--space-1) var(--space-2);
+  z-index: 100;
+}
+
+.skip-link:focus {
+  left: var(--space-2);
+  top: var(--space-2);
+}
+
+/* --- Header / nav --- */
+
+.site-header {
+  background: var(--indigo);
+  color: #fff;
+}
+
+.site-header__bar {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: #fff;
+  text-decoration: none;
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
+}
+
+.brand__mark {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius);
+  color: #fff;
+  padding: var(--space-1);
+  cursor: pointer;
+}
+
+.nav-toggle__bars,
+.nav-toggle__bars::before,
+.nav-toggle__bars::after {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #fff;
+  position: relative;
+}
+
+.nav-toggle__bars::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+}
+
+.nav-toggle__bars::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+}
+
+.primary-nav {
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.primary-nav ul {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-3);
+}
+
+.primary-nav a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  padding: var(--space-1) 0;
+  border-bottom: 2px solid transparent;
+}
+
+.primary-nav a:hover,
+.primary-nav a[aria-current="page"] {
+  color: #fff;
+  border-bottom-color: var(--accent);
+}
+
+@media (max-width: 46rem) {
+  /* Collapsing the nav behind the toggle is a JS-driven enhancement: only
+     apply it once site.js has confirmed it can run (documentElement gets
+     the "js" class). Without JS, the nav stays plain-visible so it's never
+     the toggle script's failure that blocks access to the other 7 pages
+     (FR-008). */
+  .js .nav-toggle {
+    display: inline-flex;
+  }
+
+  .js .primary-nav {
+    display: none;
+  }
+
+  .js .primary-nav.is-open {
+    display: block;
+  }
+
+  .primary-nav ul {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+/* --- Main content shell --- */
+
+main {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3);
+}
+
+section + section {
+  margin-top: var(--space-5);
+}
+
+.section-heading {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+/* --- Hero (home page) --- */
+
+.hero {
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.hero__lede {
+  max-width: 40rem;
+  margin: 0 auto var(--space-3);
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin-top: var(--space-3);
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn--secondary {
+  background: transparent;
+  color: var(--indigo);
+  border-color: var(--indigo);
+}
+
+/* --- Cards (previews, trainers, locations, news) --- */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-3);
+}
+
+.card {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+.card h3 {
+  margin-top: 0;
+}
+
+.placeholder-portrait {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, var(--indigo) 0%, var(--indigo-deep) 100%);
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  margin-bottom: var(--space-2);
+}
+
+/* --- Filter forms (schedule / news) --- */
+
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: end;
+  margin-bottom: var(--space-3);
+  padding: var(--space-2);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.filter-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  gap: 0.25rem;
+}
+
+.empty-state {
+  padding: var(--space-3);
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+/* --- Footer --- */
+
+.site-footer {
+  background: var(--indigo-deep);
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: var(--space-5);
+}
+
+.site-footer__inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.site-footer a {
+  color: #fff;
+}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Trenerzy — ALBERTOS{% endblock %}
+
+{% block content %}
+<h1>Nasi trenerzy</h1>
+<p>Poznaj instruktorów, którzy prowadzą zajęcia w ALBERTOS.</p>
+
+<div class="card-grid">
+  {% for trainer in trainers %}
+  <article class="card trainer-card" id="{{ trainer.slug }}">
+    <div class="placeholder-portrait" aria-hidden="true">{{ trainer.name[0] }}</div>
+    <h2>{{ trainer.name }}</h2>
+    <p>{{ trainer.role }} — {{ trainer.grade }}</p>
+    <p><strong>Specjalizacja:</strong> {{ trainer.specialization }}</p>
+    <p>{{ trainer.bio }}</p>
+    <p><strong>Prowadzi zajęcia w:</strong>
+      {%- for slug in trainer.location_slugs %} {{ location_names[slug] }}{% if not loop.last %},{% endif %}{% endfor %}
+    </p>
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

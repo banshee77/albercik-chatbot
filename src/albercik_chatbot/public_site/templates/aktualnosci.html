@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Aktualności — ALBERTOS{% endblock %}
+
+{% block content %}
+<h1>Aktualności</h1>
+<p>Najnowsze wiadomości z życia klubu.</p>
+
+<form id="news-filter-form" class="filter-form" method="get" action="/aktualnosci">
+  <label for="news-category">Kategoria
+    <select id="news-category" name="category">
+      <option value="">Wszystkie</option>
+      {% for cat in categories %}
+      <option value="{{ cat }}"{% if selected_category == cat %} selected{% endif %}>{{ cat }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" class="btn btn--primary">Filtruj</button>
+  <a href="/aktualnosci" class="btn btn--secondary">Wyczyść filtr</a>
+</form>
+
+<div id="news-results">
+  {% if posts %}
+  <div class="card-grid">
+    {% for post in posts %}
+    <article class="card news-post">
+      <p class="news-post__meta">{{ post.date.strftime("%d.%m.%Y") }} · {{ post.category }}</p>
+      <h2><a href="/aktualnosci/{{ post.slug }}">{{ post.title }}</a></h2>
+      <p>{{ post.summary }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-state">Brak aktualności w tej kategorii. <a href="/aktualnosci">Wyczyść filtr</a>, aby zobaczyć wszystkie wpisy.</p>
+  {% endif %}
+</div>
+{% endblock %}

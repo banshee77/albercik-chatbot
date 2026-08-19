@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} — Aktualności ALBERTOS{% endblock %}
+
+{% block content %}
+<p><a href="/aktualnosci">&larr; Wszystkie aktualności</a></p>
+<article>
+  <p class="news-post__meta">{{ post.date.strftime("%d.%m.%Y") }} · {{ post.category }}</p>
+  <h1>{{ post.title }}</h1>
+  {% if post.image_alt %}
+  <div class="placeholder-portrait" style="aspect-ratio: 16/9;" role="img" aria-label="{{ post.image_alt }}"></div>
+  {% endif %}
+  {% for paragraph in post.body %}
+  <p>{{ paragraph }}</p>
+  {% endfor %}
+</article>
+{% endblock %}

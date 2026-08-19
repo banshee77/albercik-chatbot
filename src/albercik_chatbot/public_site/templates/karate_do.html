@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}O Karate-Do (Tradycyjne Karate) — ALBERTOS{% endblock %}
+
+{% block content %}
+<h1>Czym jest Tradycyjne Karate-Do?</h1>
+<p>
+  Karate-Do — dosłownie „droga pustej ręki” — to japońska sztuka walki
+  łącząca trening techniczny z rozwojem charakteru. W przeciwieństwie do
+  czysto sportowego podejścia, tradycyjne Karate-Do traktuje trening jako
+  długą drogę samodoskonalenia, obejmującą ciało, umysł i postawę wobec
+  innych ludzi.
+</p>
+
+<section aria-labelledby="philosophy-heading">
+  <h2 id="philosophy-heading" class="section-heading">Filozofia i wartości</h2>
+  <p>
+    Tradycja Karate-Do kładzie nacisk na skromność, wytrwałość, szacunek i
+    samokontrolę. Celem treningu nie jest wyłącznie sprawność fizyczna, ale
+    także budowanie dyscypliny i spokoju, które przenoszą się na
+    codzienne życie ćwiczącego.
+  </p>
+</section>
+
+<section aria-labelledby="pillars-heading">
+  <h2 id="pillars-heading" class="section-heading">Kihon, kata i kumite</h2>
+  <p>
+    Trening Karate-Do opiera się na trzech filarach. <strong>Kihon</strong>
+    to podstawowe techniki — uderzenia, bloki i kopnięcia — ćwiczone w
+    izolacji, aby zbudować poprawną formę i siłę. <strong>Kata</strong> to
+    ułożone sekwencje technik wykonywane samodzielnie, symulujące walkę z
+    wieloma przeciwnikami — uczą płynności, równowagi i koncentracji.
+    <strong>Kumite</strong> to walka, od form umownych po swobodną wymianę
+    technik z partnerem, gdzie zdobyta technika spotyka się z żywym,
+    reagującym przeciwnikiem.
+  </p>
+</section>
+
+<section aria-labelledby="etiquette-heading">
+  <h2 id="etiquette-heading" class="section-heading">Etykieta i kultura dojo</h2>
+  <p>
+    Dojo — sala treningowa — rządzi się własną etykietą: ukłon (rei) przy
+    wejściu i wyjściu, chwila skupienia (mokuso) na początku i końcu
+    zajęć oraz szacunek wobec instruktora i partnerów treningowych. Te
+    zwyczaje nie są formalnością — uczą uważności i szacunku, które są
+    integralną częścią treningu.
+  </p>
+</section>
+
+<section aria-labelledby="grading-heading">
+  <h2 id="grading-heading" class="section-heading">Stopnie i pasy</h2>
+  <p>
+    Postęp w Karate-Do oznaczany jest kolejnymi stopniami uczniowskimi
+    (kyu), tradycyjnie widocznymi w kolorze pasa — od białego dla
+    początkujących, przez żółty, pomarańczowy, zielony, niebieski i
+    brązowy, aż po czarny pas (dan) dla zaawansowanych. Każdy stopień
+    wymaga zdania egzaminu potwierdzającego opanowanie odpowiednich
+    technik.
+  </p>
+</section>
+
+<section aria-labelledby="benefits-heading">
+  <h2 id="benefits-heading" class="section-heading">Korzyści dla różnych grup wiekowych</h2>
+  <p>
+    <strong>Dzieci</strong> zyskują koordynację ruchową, koncentrację i
+    zdrową dyscyplinę. <strong>Młodzież</strong> rozwija pewność siebie i
+    umiejętność radzenia sobie z presją. <strong>Dorośli</strong>
+    znajdują w treningu formę aktywności fizycznej łączącą wysiłek z
+    wyciszeniem umysłu, niezależnie od wcześniejszego doświadczenia
+    sportowego.
+  </p>
+</section>
+
+<section aria-labelledby="glossary-heading" data-reveal>
+  <h2 id="glossary-heading" class="section-heading">Słowniczek pojęć dojo</h2>
+  <p>Najczęściej używane podczas treningu japońskie komendy i nazwy technik.</p>
+  {% for category, terms in glossary_by_category.items() %}
+  <h3>{{ category }}</h3>
+  <dl class="glossary-list">
+    {% for entry in terms %}
+    <div class="glossary-term">
+      <dt>{{ entry.term }}</dt>
+      <dd>{{ entry.explanation }}</dd>
+    </div>
+    {% endfor %}
+  </dl>
+  {% endfor %}
+</section>
+{% endblock %}

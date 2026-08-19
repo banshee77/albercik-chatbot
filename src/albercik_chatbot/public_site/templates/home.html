@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}ALBERTOS — Klub Tradycyjnego Karate-Do{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>ALBERTOS — Akademia Tradycyjnego Karate-Do</h1>
+  <p class="hero__lede">
+    Trenuj z nami dyscyplinę, precyzję i szacunek tradycji Karate-Do — zajęcia
+    dla dzieci, młodzieży i dorosłych, prowadzone przez doświadczonych
+    instruktorów w kilku sekcjach w Grodzinie i Wierzbinie.
+  </p>
+  <div class="cta-row">
+    <a class="btn btn--primary" href="/kontakt">Dołącz do nas — Przyjdź na pierwszy trening</a>
+    <a class="btn btn--secondary" href="/grafik">Zobacz grafik treningów</a>
+  </div>
+</section>
+
+<section aria-labelledby="intro-heading">
+  <h2 id="intro-heading" class="section-heading">Czym jest Tradycyjne Karate-Do?</h2>
+  <p>
+    Tradycyjne Karate-Do to japońska sztuka walki łącząca trening techniczny
+    (kihon, kata, kumite) z rozwojem charakteru — dyscypliną, cierpliwością i
+    szacunkiem wobec innych. W ALBERTOS uczymy karate-do jako drogę rozwoju
+    fizycznego i osobistego, dostępną dla każdego, niezależnie od wieku i
+    wcześniejszego doświadczenia.
+    <a href="/karate-do">Dowiedz się więcej o Karate-Do</a>.
+  </p>
+</section>
+
+<section aria-labelledby="news-heading" data-reveal>
+  <h2 id="news-heading" class="section-heading">Aktualności</h2>
+  <div class="card-grid">
+    {% for post in news_preview %}
+    <article class="card">
+      <h3><a href="/aktualnosci/{{ post.slug }}">{{ post.title }}</a></h3>
+      <p>{{ post.summary }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  <p><a href="/aktualnosci">Zobacz wszystkie aktualności</a></p>
+</section>
+
+<section aria-labelledby="sections-heading" data-reveal>
+  <h2 id="sections-heading" class="section-heading">Nasze sekcje</h2>
+  <div class="card-grid">
+    {% for location in locations_preview %}
+    <article class="card">
+      <h3>{{ location.name }}</h3>
+      <p>{{ location.address }}</p>
+      <p>{{ location.age_level }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  <p><a href="/sekcje">Zobacz wszystkie sekcje</a></p>
+</section>
+
+<section aria-labelledby="trainer-heading" data-reveal>
+  <h2 id="trainer-heading" class="section-heading">Poznaj naszych instruktorów</h2>
+  <article class="card">
+    <div class="placeholder-portrait" aria-hidden="true">{{ trainer_preview.name[0] }}</div>
+    <h3>{{ trainer_preview.name }}</h3>
+    <p>{{ trainer_preview.role }} — {{ trainer_preview.grade }}</p>
+    <p>{{ trainer_preview.bio }}</p>
+  </article>
+  <p><a href="/trenerzy">Poznaj cały zespół trenerski</a></p>
+</section>
+
+<section aria-labelledby="benefits-heading" data-reveal>
+  <h2 id="benefits-heading" class="section-heading">Dlaczego warto trenować w ALBERTOS?</h2>
+  <ul>
+    <li>Doświadczeni instruktorzy i kameralne grupy treningowe.</li>
+    <li>Zajęcia dla dzieci, młodzieży i dorosłych na każdym poziomie.</li>
+    <li>Nacisk na tradycję, dyscyplinę i rozwój charakteru, nie tylko technikę.</li>
+    <li>Regularne egzaminy na stopnie kyu oraz obozy treningowe.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="contact-heading" data-reveal>
+  <h2 id="contact-heading" class="section-heading">Masz pytania?</h2>
+  <p>Skontaktuj się z nami — chętnie odpowiemy i pomożemy dobrać odpowiednią grupę.</p>
+  <a class="btn btn--primary" href="/kontakt">Przejdź do kontaktu</a>
+</section>
+{% endblock %}

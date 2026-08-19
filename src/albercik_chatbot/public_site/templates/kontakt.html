@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Kontakt — ALBERTOS{% endblock %}
+
+{% block content %}
+<h1>Kontakt</h1>
+<p>Masz pytania dotyczące treningów lub zapisów? Skontaktuj się z nami.</p>
+
+<section aria-labelledby="contact-details-heading">
+  <h2 id="contact-details-heading" class="section-heading">Dane kontaktowe</h2>
+  <ul>
+    <li>Telefon: <a href="tel:+48123456789">+48 123 456 789</a></li>
+    <li>E-mail: <a href="mailto:kontakt@albertos.example">kontakt@albertos.example</a></li>
+  </ul>
+  <p>
+    <a href="https://facebook.com/albertos.example" rel="noopener">Facebook</a>
+    ·
+    <a href="https://instagram.com/albertos.example" rel="noopener">Instagram</a>
+  </p>
+</section>
+
+<section aria-labelledby="contact-locations-heading">
+  <h2 id="contact-locations-heading" class="section-heading">Nasze lokalizacje</h2>
+  <ul>
+    {% for location in locations %}
+    <li><strong>{{ location.name }}</strong> — {{ location.address }}</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section aria-labelledby="contact-form-heading">
+  <h2 id="contact-form-heading" class="section-heading">Napisz do nas</h2>
+  <p><em>Ten formularz służy wyłącznie prezentacji — wiadomości nie są obecnie wysyłane. Prosimy o kontakt telefoniczny lub mailowy.</em></p>
+  <form aria-label="Formularz kontaktowy (prezentacyjny)">
+    <p>
+      <label for="contact-name">Imię i nazwisko<br>
+        <input type="text" id="contact-name" name="name" autocomplete="name">
+      </label>
+    </p>
+    <p>
+      <label for="contact-email">E-mail<br>
+        <input type="email" id="contact-email" name="email" autocomplete="email">
+      </label>
+    </p>
+    <p>
+      <label for="contact-message">Wiadomość<br>
+        <textarea id="contact-message" name="message" rows="4"></textarea>
+      </label>
+    </p>
+    <button type="button" class="btn btn--secondary" disabled>Formularz prezentacyjny — wysyłka niedostępna</button>
+  </form>
+</section>
+{% endblock %}

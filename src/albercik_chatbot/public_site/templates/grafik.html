@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Grafik treningów — ALBERTOS{% endblock %}
+
+{% block content %}
+<h1>Grafik treningów</h1>
+<p>Wybierz lokalizację, dzień lub poziom zaawansowania, aby zawęzić listę zajęć.</p>
+
+<form id="schedule-filter-form" class="filter-form" method="get" action="/grafik">
+  <label for="schedule-location">Lokalizacja
+    <select id="schedule-location" name="location">
+      <option value="">Wszystkie</option>
+      {% for slug, name in filter_locations %}
+      <option value="{{ slug }}"{% if selected_location == slug %} selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label for="schedule-day">Dzień
+    <select id="schedule-day" name="day">
+      <option value="">Wszystkie</option>
+      {% for d in filter_days %}
+      <option value="{{ d }}"{% if selected_day == d %} selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label for="schedule-level">Poziom
+    <select id="schedule-level" name="level">
+      <option value="">Wszystkie</option>
+      {% for lvl in filter_levels %}
+      <option value="{{ lvl }}"{% if selected_level == lvl %} selected{% endif %}>{{ lvl }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" class="btn btn--primary">Filtruj</button>
+  <a href="/grafik" class="btn btn--secondary">Wyczyść filtry</a>
+</form>
+
+<div id="schedule-results">
+  {% if sessions %}
+  <div class="card-grid">
+    {% for session in sessions %}
+    <article class="card training-session">
+      <h3>{{ location_names[session.location_slug] }}</h3>
+      <p>{{ session.day }}, {{ session.time_range }}</p>
+      <p>{{ session.age_level }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-state">Brak zajęć spełniających wybrane kryteria. <a href="/grafik">Wyczyść filtry</a>, aby zobaczyć wszystkie treningi.</p>
+  {% endif %}
+</div>
+{% endblock %}
