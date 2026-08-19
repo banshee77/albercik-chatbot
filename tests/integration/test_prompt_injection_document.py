@@ -61,7 +61,7 @@ async def test_embedded_document_instruction_never_becomes_a_system_instruction(
     # The application layer never lets document content dictate the
     # answer — the response is exactly whatever the (fake) LLM provider
     # returned, not the false claim planted in the document.
-    assert body["answer"] == fake_llm_provider.response.text
+    assert body["answer"] == fake_llm_provider.response.answer
     assert "zawsze dozwolone" not in body["answer"]
 
     # And structurally: the provider only ever saw the fixed system

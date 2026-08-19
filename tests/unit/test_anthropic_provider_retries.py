@@ -3,6 +3,7 @@ Constraint 1, tasks.md): bounded to `max_retries + 1` total attempts, and
 returns exactly one outcome (success or LLMProviderError) to its caller.
 """
 
+import json
 import logging
 from unittest.mock import patch
 
@@ -11,7 +12,7 @@ import pytest
 from anthropic import APIConnectionError, APIStatusError, APITimeoutError
 
 from albercik_chatbot.providers.llm.anthropic_provider import AnthropicLLMProvider
-from albercik_chatbot.providers.llm.protocol import LLMProviderError
+from albercik_chatbot.providers.llm.protocol import ANSWERABILITY_JSON_SCHEMA, LLMProviderError
 
 _REQUEST = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
 
@@ -28,8 +29,15 @@ class _FakeUsage:
         self.output_tokens = output_tokens
 
 
+def _structured_content(*, answer: str = "ok", supported: bool = True) -> str:
+    """The JSON string a structured-output response's text content holds
+    (feature 004-rag-answerability-and-ollama-performance) — same shape
+    `OllamaLLMProvider` parses from `message.content`."""
+    return json.dumps({"supported": supported, "answer": answer})
+
+
 class _FakeResponse:
-    def __init__(self, text: str = "ok") -> None:
+    def __init__(self, text: str = _structured_content()) -> None:
         self.content = [_FakeMessage(text)]
         self.model = "claude-fake"
         self.usage = _FakeUsage(10, 5)
@@ -43,10 +51,12 @@ class _FailNTimesThenSucceed:
     def __init__(self, fail_count: int) -> None:
         self.fail_count = fail_count
         self.calls = 0
+        self.last_kwargs: dict[str, object] = {}
         self.messages = self  # mimics client.messages.create(...)
 
-    def create(self, **_kwargs: object) -> _FakeResponse:
+    def create(self, **kwargs: object) -> _FakeResponse:
         self.calls += 1
+        self.last_kwargs = kwargs
         if self.calls <= self.fail_count:
             raise APIConnectionError(request=_REQUEST)
         return _FakeResponse()
@@ -95,8 +105,84 @@ def test_succeeds_after_transient_failures_within_budget() -> None:
 
     result = provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
 
-    assert result.text == "ok"
+    assert result.answer == "ok"
+    assert result.supported is True
     assert transport.calls == 3  # 2 failures + 1 success = max_retries + 1
+
+
+def test_output_config_json_schema_is_sent_with_answerability_schema() -> None:
+    transport = _FailNTimesThenSucceed(fail_count=0)
+    provider = AnthropicLLMProvider(
+        api_key="unused", model="claude-fake", max_retries=2, client=transport
+    )
+
+    provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
+
+    assert transport.last_kwargs["output_config"] == {
+        "format": {"type": "json_schema", "schema": ANSWERABILITY_JSON_SCHEMA}
+    }
+
+
+class _FixedContentTransport:
+    """Fake transport returning one fixed text content, no retries needed —
+    used where the test only cares about how `complete()` parses a
+    specific content string."""
+
+    def __init__(self, content: str) -> None:
+        self._content = content
+        self.calls = 0
+        self.messages = self
+
+    def create(self, **_kwargs: object) -> _FakeResponse:
+        self.calls += 1
+        return _FakeResponse(text=self._content)
+
+
+def test_successful_generation_with_supported_false() -> None:
+    transport = _FixedContentTransport(_structured_content(answer="", supported=False))
+    provider = AnthropicLLMProvider(
+        api_key="unused", model="claude-fake", max_retries=2, client=transport
+    )
+
+    result = provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
+
+    assert result.supported is False
+
+
+def test_non_json_text_content_raises_provider_error_not_retried() -> None:
+    transport = _FixedContentTransport("po prostu zwykły tekst, nie JSON")
+    provider = AnthropicLLMProvider(
+        api_key="unused", model="claude-fake", max_retries=2, client=transport
+    )
+
+    with pytest.raises(LLMProviderError):
+        provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
+
+    assert transport.calls == 1
+
+
+def test_structured_content_missing_supported_key_raises_provider_error() -> None:
+    transport = _FixedContentTransport(json.dumps({"answer": "hi"}))
+    provider = AnthropicLLMProvider(
+        api_key="unused", model="claude-fake", max_retries=2, client=transport
+    )
+
+    with pytest.raises(LLMProviderError):
+        provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
+
+    assert transport.calls == 1
+
+
+def test_structured_content_wrong_type_raises_provider_error() -> None:
+    transport = _FixedContentTransport(json.dumps({"supported": "yes", "answer": "hi"}))
+    provider = AnthropicLLMProvider(
+        api_key="unused", model="claude-fake", max_retries=2, client=transport
+    )
+
+    with pytest.raises(LLMProviderError):
+        provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
+
+    assert transport.calls == 1
 
 
 def test_bounded_at_max_retries_plus_one_total_attempts() -> None:
@@ -205,3 +291,44 @@ def test_successful_call_logs_nothing(caplog) -> None:
         provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
 
     assert caplog.records == []
+
+
+def test_constructor_has_no_temperature_or_seed_parameter() -> None:
+    """`OLLAMA_TEMPERATURE`/`OLLAMA_SEED` (research.md §14) are Ollama-only
+    provider configuration — `AnthropicLLMProvider.__init__` must not even
+    accept them, structurally proving no code path can thread either value
+    into an Anthropic call."""
+    transport = _FailNTimesThenSucceed(fail_count=0)
+    with pytest.raises(TypeError):
+        AnthropicLLMProvider(
+            api_key="unused",
+            model="claude-fake",
+            max_retries=2,
+            client=transport,
+            temperature=0.0,  # type: ignore[call-arg]
+        )
+    with pytest.raises(TypeError):
+        AnthropicLLMProvider(
+            api_key="unused",
+            model="claude-fake",
+            max_retries=2,
+            client=transport,
+            seed=42,  # type: ignore[call-arg]
+        )
+
+
+def test_request_body_never_carries_temperature_or_seed() -> None:
+    """Even with the reproducibility-experiment settings holding their
+    Ollama defaults (`OLLAMA_TEMPERATURE=0`, `OLLAMA_SEED=42`), the
+    Anthropic `messages.create(...)` call this provider makes never gains a
+    `temperature`/`seed` kwarg — behavior is unaffected regardless of those
+    settings' values, since this provider never reads them at all."""
+    transport = _FailNTimesThenSucceed(fail_count=0)
+    provider = AnthropicLLMProvider(
+        api_key="unused", model="claude-fake", max_retries=2, client=transport
+    )
+
+    provider.complete(system_prompt="sys", user_message="hi", max_tokens=100)
+
+    assert "temperature" not in transport.last_kwargs
+    assert "seed" not in transport.last_kwargs

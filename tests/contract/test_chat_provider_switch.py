@@ -79,7 +79,12 @@ async def test_switching_backend_is_configuration_only(
     # here rather than the fake's unrelated default, so the assertion below
     # exercises the same field a real deployment would populate.
     fake_llm_provider.response = LLMResult(
-        text=_ANSWER_CONTENT, model=expected_model, input_tokens=20, output_tokens=12, latency_ms=7
+        answer=_ANSWER_CONTENT,
+        supported=True,
+        model=expected_model,
+        input_tokens=20,
+        output_tokens=12,
+        latency_ms=7,
     )
 
     _seed_document_with_chunk(
@@ -149,6 +154,7 @@ async def test_response_shape_is_identical_across_backends(
             "outcome",
             "answer",
             "sources",
+            "request_id",
         }
     )
     assert bodies["ollama"]["outcome"] == bodies["anthropic"]["outcome"] == "grounded"

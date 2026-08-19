@@ -23,6 +23,7 @@ from sqlalchemy import (
     Uuid,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # Fixed by the local intfloat/multilingual-e5-small model (research.md §4).
@@ -162,6 +163,14 @@ class UsageRecord(Base):
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     success: Mapped[bool] = mapped_column(Boolean, nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    # NEW (feature 004-rag-answerability-and-ollama-performance,
+    # data-model.md "UsageRecord (extended)"). Verbatim copy of
+    # `LLMResult.provider_metrics` when a provider returns one — Ollama
+    # populates `*_duration_ns` keys (native nanoseconds, no conversion);
+    # Anthropic and every `embedding`-kind row leave this `NULL`. Written
+    # exactly once, opaquely, by `_record_usage()` — no other layer reads
+    # or branches on its keys (research.md §8).
+    provider_metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -91,10 +91,14 @@ def _record_usage(
     output_tokens: int | None,
     success: bool,
     latency_ms: int,
+    provider_metrics: dict[str, int] | None = None,
 ) -> None:
     # Deliberately only these fields: no prompt/question/document/system-
     # instruction text is ever passed in here, and `UsageRecord` has no
     # column that could hold it even by mistake (FR-052, Principle IX).
+    # `provider_metrics` is threaded through opaquely — this function never
+    # reads or branches on its keys (research.md §8); it is whatever
+    # `LLMResult.provider_metrics` the provider returned, or `None`.
     session.add(
         UsageRecord(
             request_id=request_id,
@@ -105,6 +109,7 @@ def _record_usage(
             output_tokens=output_tokens,
             success=success,
             latency_ms=latency_ms,
+            provider_metrics=provider_metrics,
         )
     )
     session.flush()
@@ -222,8 +227,21 @@ def ask_question(
             output_tokens=result.output_tokens,
             success=True,
             latency_ms=result.latency_ms,
+            provider_metrics=result.provider_metrics,
         )
 
+        if not result.supported:
+            # A genuine, successfully-parsed "the context does not support
+            # an answer" decision (FR-001/FR-003) — `result.answer`'s
+            # content is deliberately never surfaced here, even though the
+            # model produced text; a malformed/unparseable structured
+            # response never reaches this branch at all, since the
+            # provider raises `LLMProviderError` for that case instead
+            # (handled above), never a `LLMResult(supported=False, ...)`.
+            return AskQuestionResult(
+                outcome="insufficient_information", answer=_INSUFFICIENT_INFORMATION_MESSAGE
+            )
+
         return AskQuestionResult(
-            outcome="grounded", answer=result.text, sources=extract_sources(limited_chunks)
+            outcome="grounded", answer=result.answer, sources=extract_sources(limited_chunks)
         )

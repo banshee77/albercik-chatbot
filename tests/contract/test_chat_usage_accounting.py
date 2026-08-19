@@ -20,6 +20,7 @@ from albercik_chatbot.persistence.models import (
     ProviderKind,
     UsageRecord,
 )
+from albercik_chatbot.providers.llm.protocol import LLMResult
 
 
 @pytest.mark.asyncio
@@ -81,3 +82,104 @@ async def test_out_of_scope_request_records_no_usage_rows(db_async_client, db_se
 
     rows = db_session.execute(select(UsageRecord)).scalars().all()
     assert rows == []
+
+
+# --- Feature 004-rag-answerability-and-ollama-performance, User Story 3
+# (research.md §8, data-model.md "UsageRecord (extended)"):
+# `provider_metrics` is persisted opaquely, verbatim from whatever
+# `LLMResult.provider_metrics` the provider returned. ---
+
+
+@pytest.mark.asyncio
+async def test_llm_usage_row_persists_provider_metrics_verbatim(
+    db_async_client, db_session, fake_llm_provider, fake_embedding_provider
+) -> None:
+    question = "Jakie są godziny otwarcia biura Albertos?"
+    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    db_session.add(admin)
+    db_session.flush()
+    document = KnowledgeDocument(
+        original_filename="godziny.txt",
+        uploaded_by_admin_id=admin.id,
+        status=DocumentStatus.ready,
+    )
+    db_session.add(document)
+    db_session.flush()
+    db_session.add(
+        DocumentChunk(
+            document_id=document.id,
+            position=0,
+            content="Biuro Albertos jest otwarte od poniedziałku do piątku.",
+            embedding=fake_embedding_provider.embed_query(question),
+        )
+    )
+    db_session.flush()
+
+    fake_llm_provider.response = LLMResult(
+        answer="Biuro jest otwarte od poniedziałku do piątku.",
+        supported=True,
+        model="qwen3:4b",
+        input_tokens=20,
+        output_tokens=12,
+        latency_ms=7,
+        provider_metrics={
+            "total_duration_ns": 1_000_000_000,
+            "load_duration_ns": 200_000_000,
+            "prompt_eval_duration_ns": 50_000_000,
+            "eval_duration_ns": 750_000_000,
+        },
+    )
+
+    response = await db_async_client.post("/api/v1/chat", json={"question": question})
+    assert response.status_code == 200
+
+    llm_row = (
+        db_session.execute(select(UsageRecord).where(UsageRecord.provider_kind == ProviderKind.llm))
+        .scalars()
+        .one()
+    )
+    assert llm_row.provider_metrics == {
+        "total_duration_ns": 1_000_000_000,
+        "load_duration_ns": 200_000_000,
+        "prompt_eval_duration_ns": 50_000_000,
+        "eval_duration_ns": 750_000_000,
+    }
+
+
+@pytest.mark.asyncio
+async def test_llm_usage_row_provider_metrics_is_null_when_provider_reports_none(
+    db_async_client, db_session, fake_embedding_provider
+) -> None:
+    """The default `FakeLLMProvider` response (and, in practice, every
+    Anthropic-backed call) has `provider_metrics=None` — the column must
+    stay `NULL`, never a fabricated/empty dict (FR-019)."""
+    question = "Jakie są godziny otwarcia biura Albertos?"
+    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    db_session.add(admin)
+    db_session.flush()
+    document = KnowledgeDocument(
+        original_filename="godziny.txt",
+        uploaded_by_admin_id=admin.id,
+        status=DocumentStatus.ready,
+    )
+    db_session.add(document)
+    db_session.flush()
+    db_session.add(
+        DocumentChunk(
+            document_id=document.id,
+            position=0,
+            content="Biuro Albertos jest otwarte od poniedziałku do piątku.",
+            embedding=fake_embedding_provider.embed_query(question),
+        )
+    )
+    db_session.flush()
+
+    response = await db_async_client.post("/api/v1/chat", json={"question": question})
+    assert response.status_code == 200
+
+    llm_row = (
+        db_session.execute(select(UsageRecord).where(UsageRecord.provider_kind == ProviderKind.llm))
+        .scalars()
+        .one()
+    )
+    assert llm_row.provider_metrics is None

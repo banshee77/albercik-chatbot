@@ -18,11 +18,13 @@ class FakeLLMProvider:
         error: Exception | None = None,
     ) -> None:
         self.response = response or LLMResult(
-            text="To jest odpowiedź testowa.",
+            answer="To jest odpowiedź testowa.",
+            supported=True,
             model="fake-llm",
             input_tokens=10,
             output_tokens=5,
             latency_ms=1,
+            provider_metrics=None,
         )
         self.error = error
         self.calls: list[dict[str, object]] = []

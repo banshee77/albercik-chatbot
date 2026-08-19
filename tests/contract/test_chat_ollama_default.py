@@ -119,7 +119,8 @@ async def test_default_provider_usage_is_recorded_as_ollama(
     # fake's unrelated default, so the assertion below exercises the same
     # field a real deployment would populate.
     fake_llm_provider.response = LLMResult(
-        text="Biuro jest czynne od 9 do 17.",
+        answer="Biuro jest czynne od 9 do 17.",
+        supported=True,
         model=configured_model,
         input_tokens=20,
         output_tokens=12,

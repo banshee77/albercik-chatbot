@@ -6,15 +6,32 @@ Bounded per research.md §7: at most `max_retries` retries (so
 (non-retryable/client) error. Returns exactly one `LLMResult` or raises
 exactly one `LLMProviderError` to its caller — `application/ask_question.py`
 MUST NOT wrap this in a further retry loop.
+
+Feature 004-rag-answerability-and-ollama-performance: the request now
+carries `output_config={"format": {"type": "json_schema", "schema":
+ANSWERABILITY_JSON_SCHEMA}}` — Anthropic's native, stable structured-
+outputs parameter (research.md §4), not forced tool-use. The response's
+text content is still a plain `TextBlock`, now constrained to a JSON
+string this provider parses for `supported`/`answer` — the same shared
+schema and parsing shape `OllamaLLMProvider` uses. A response that fails
+to parse, is missing a required key, or has the wrong key type is a
+provider/protocol failure — caught here and raised as `LLMProviderError`
+(mapping to the existing `unavailable` outcome), never returned as
+`LLMResult(supported=False, ...)` (research.md §5, FR-008).
 """
 
+import json
 import time
 from typing import Protocol as TypingProtocol
 
 from anthropic import Anthropic, APIConnectionError, APIStatusError, APITimeoutError
 
 from albercik_chatbot.infra.logging import get_logger
-from albercik_chatbot.providers.llm.protocol import LLMProviderError, LLMResult
+from albercik_chatbot.providers.llm.protocol import (
+    ANSWERABILITY_JSON_SCHEMA,
+    LLMProviderError,
+    LLMResult,
+)
 
 logger = get_logger(__name__)
 
@@ -66,6 +83,13 @@ class AnthropicLLMProvider:
                     max_tokens=max_tokens,
                     system=system_prompt,
                     messages=[{"role": "user", "content": user_message}],
+                    # Structured answerability contract (research.md §4) —
+                    # the same shared schema OllamaLLMProvider uses, via
+                    # Anthropic's own native structured-outputs parameter.
+                    # No forced tool-use.
+                    output_config={
+                        "format": {"type": "json_schema", "schema": ANSWERABILITY_JSON_SCHEMA}
+                    },
                 )
             except APIStatusError as exc:
                 if 400 <= exc.status_code < 500:
@@ -90,9 +114,29 @@ class AnthropicLLMProvider:
                 text = "".join(
                     block.text for block in content if getattr(block, "type", None) == "text"
                 )
+                try:
+                    structured = json.loads(text)
+                    answer = structured["answer"]
+                    supported = structured["supported"]
+                    if not isinstance(answer, str) or not isinstance(supported, bool):
+                        raise TypeError("supported/answer field has the wrong type")
+                except (json.JSONDecodeError, KeyError, TypeError) as exc:
+                    # Schema-level failure: a provider/protocol failure,
+                    # never a "no evidence" answerability decision
+                    # (research.md §5, FR-008). Deliberately never returns
+                    # `LLMResult(supported=False, ...)` here.
+                    logger.warning(
+                        "Anthropic returned a structured answerability response that failed to "
+                        "parse or validate: %s",
+                        exc,
+                    )
+                    raise LLMProviderError(
+                        "Anthropic returned a malformed structured answerability response"
+                    ) from exc
                 usage = getattr(response, "usage", None)
                 return LLMResult(
-                    text=text,
+                    answer=answer,
+                    supported=supported,
                     model=getattr(response, "model", self._model),
                     input_tokens=getattr(usage, "input_tokens", None) if usage else None,
                     output_tokens=getattr(usage, "output_tokens", None) if usage else None,

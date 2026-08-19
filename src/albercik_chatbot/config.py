@@ -36,12 +36,46 @@ class Settings(BaseSettings):
     # `docker-compose.yml` never publishes Ollama's port; only the `app`
     # service can reach it (spec FR-008).
     OLLAMA_BASE_URL: str = "http://ollama:11434"
-    # Never hardcoded in application/domain logic (spec FR-006).
-    OLLAMA_MODEL: str = "qwen3:4b"
+    # Never hardcoded in application/domain logic (spec FR-006). Changed
+    # from `qwen3:4b` to `qwen3:8b` (2026-08-19, feature
+    # 004-rag-answerability-and-ollama-performance research.md §17):
+    # measured, deterministic (OLLAMA_TEMPERATURE=0/OLLAMA_SEED=42) grounded
+    # accuracy 19/20 vs. 4B's 17/20, with insufficient-information rejection
+    # (7/7), false-grounded (0/7), and out-of-scope (3/3) all unchanged, and
+    # latency/VRAM (~6.0 GB) remaining acceptable on the RTX 3070 reference
+    # host — see eval/README.md's "Model selection: qwen3:8b adopted as
+    # default" section for the full comparison. `qwen3:4b` remains a valid
+    # lower-resource manual override (`OLLAMA_MODEL=qwen3:4b`); SC-001
+    # (20/20) is still not met on either model (question #6 fails on both).
+    OLLAMA_MODEL: str = "qwen3:8b"
     # Independent from PROVIDER_TIMEOUT_SECONDS (Anthropic's) — local
     # CPU-hosted inference of even a small model is expected to be slower
     # than the hosted API, so this defaults more generously.
     OLLAMA_TIMEOUT_SECONDS: float = 60.0
+    # Server-side only (feature 004-rag-answerability-and-ollama-performance,
+    # research.md §6) — controls Qwen3's hybrid-reasoning "thinking" step
+    # before it answers. Owned entirely by `OllamaLLMProvider`, never part
+    # of the shared `LLMProvider.complete()` signature and never derived
+    # from request content (FR-013); the Anthropic backend is unaffected
+    # regardless of this value (FR-015). Defaults to `False` — thinking
+    # mode is a documented, measured latency cost (spec Story 3, ~4-19s
+    # grounded calls), so the safer MVP default is off until an A/B
+    # comparison (SC-004) justifies changing it.
+    OLLAMA_THINK: bool = False
+
+    # --- Ollama generation determinism (research.md §14 — reproducibility
+    # experiment) ---
+    # A same prompt+context+model call was observed to yield a different
+    # `supported` decision across separate invocations at Ollama's default
+    # (nonzero) sampling temperature — this made single-run eval deltas an
+    # unreliable signal for judging prompt changes. Both knobs are
+    # Ollama-provider-only configuration (like OLLAMA_THINK above): owned
+    # entirely by `OllamaLLMProvider`, never part of the shared
+    # `LLMProvider.complete()` signature, and never derived from request
+    # content — a public request can never override them. The Anthropic
+    # backend is unaffected regardless of these values.
+    OLLAMA_TEMPERATURE: float = 0.0
+    OLLAMA_SEED: int = 42
 
     # --- Embedding provider (local, sentence-transformers — research.md §4/§4a) ---
     EMBEDDING_MODEL_NAME: str = "intfloat/multilingual-e5-small"

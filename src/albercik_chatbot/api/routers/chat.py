@@ -69,6 +69,7 @@ def post_chat(
         budget_max_llm_requests_per_hour=settings.BUDGET_MAX_LLM_REQUESTS_PER_HOUR,
         max_context_chars=settings.MAX_CONTEXT_CHARS,
     )
+    request_id = uuid.uuid4()
     result = ask_question(
         payload.question,
         session=session,
@@ -83,7 +84,7 @@ def post_chat(
         safety=safety,
         rate_limit_source_key=source_key,
         concurrency_guard=concurrency_guard,
-        request_id=uuid.uuid4(),
+        request_id=request_id,
     )
     if result.outcome == "unavailable":
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
@@ -94,4 +95,5 @@ def post_chat(
             SourceReferenceOut(document_id=source.document_id, label=source.label)
             for source in result.sources
         ],
+        request_id=request_id,
     )

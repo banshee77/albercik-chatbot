@@ -89,7 +89,11 @@ services:
     restart: "no"
     environment:
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
+      # Default qwen3:8b (feature 004-rag-answerability-and-ollama-
+      # performance, 2026-08-19 — see eval/README.md's "Model selection:
+      # qwen3:8b adopted as default"); override via .env's OLLAMA_MODEL,
+      # e.g. OLLAMA_MODEL=qwen3:4b for a lower-resource host.
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
       LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
     depends_on:
       ollama:

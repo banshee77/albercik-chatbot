@@ -48,6 +48,9 @@ def _build_configured_llm_provider(settings: Settings) -> LLMProvider:
             model=settings.OLLAMA_MODEL,
             max_retries=settings.PROVIDER_MAX_RETRIES,
             timeout_seconds=settings.OLLAMA_TIMEOUT_SECONDS,
+            think=settings.OLLAMA_THINK,
+            temperature=settings.OLLAMA_TEMPERATURE,
+            seed=settings.OLLAMA_SEED,
         )
     return AnthropicLLMProvider(
         api_key=settings.ANTHROPIC_API_KEY,

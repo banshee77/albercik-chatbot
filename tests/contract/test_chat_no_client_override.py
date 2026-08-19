@@ -69,6 +69,25 @@ async def test_client_supplied_override_fields_are_rejected(db_async_client) -> 
         {"max_tokens": 1},
         {"timeout": 0.001},
         {"retries": 0},
+        # Feature 004-rag-answerability-and-ollama-performance, US3
+        # (FR-013): `OLLAMA_THINK` is server config owned by
+        # `OllamaLLMProvider`, never a request-body field — every spelling
+        # a client might plausibly try must be rejected the same way as
+        # any other provider-selection override attempt.
+        {"think": True},
+        {"think": False},
+        {"OLLAMA_THINK": True},
+        {"ollama_think": True},
+        # Reproducibility experiment (research.md §14): `temperature`/`seed`
+        # are Ollama-provider-owned server config too — the same guarantee
+        # extends to every plausible spelling of an override attempt.
+        {"temperature": 1.5},
+        {"temperature": 0.0},
+        {"seed": 999},
+        {"OLLAMA_TEMPERATURE": 1.5},
+        {"OLLAMA_SEED": 999},
+        {"ollama_temperature": 1.5},
+        {"ollama_seed": 999},
     ],
 )
 async def test_individual_provider_selection_override_attempts_are_each_rejected(

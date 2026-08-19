@@ -44,6 +44,13 @@ class ChatResponse(BaseModel):
     outcome: Literal["grounded", "insufficient_information", "out_of_scope", "unavailable"]
     answer: str
     sources: list[SourceReferenceOut] = Field(default_factory=list)
+    # Correlation id for this request, also stored on the corresponding
+    # `usage_records` row — non-sensitive, enables dev tooling (e.g.
+    # scripts/run_eval.py) to look up per-request token/latency/telemetry
+    # data without exposing it directly in this public response
+    # (contracts/chat-endpoint-delta.md, feature
+    # 004-rag-answerability-and-ollama-performance).
+    request_id: uuid.UUID
 
 
 class LoginRequest(BaseModel):
