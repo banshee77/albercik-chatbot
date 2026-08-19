@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Wieslaw Pedzich", email = "wieslaw.pedzich@gmail.com" }
+    { name = "Banshee77", email = "banshee77@gmail.com" }
 ]
 requires-python = ">=3.14"
 dependencies = [
