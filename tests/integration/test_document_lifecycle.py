@@ -18,9 +18,9 @@ from tests.fixtures.admin import seed_admin_and_token
 
 @pytest.mark.asyncio
 async def test_uploaded_document_is_retrievable_then_deletion_excludes_it(
-    db_async_client, db_session, fake_embedding_provider
+    db_async_client, db_session, default_tenant, fake_embedding_provider
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     headers = {"authorization": f"Bearer {token}"}
     document_content = "Albertos jest czynny od poniedzialku do piatku w godzinach 9-17."
 
@@ -54,9 +54,9 @@ async def test_uploaded_document_is_retrievable_then_deletion_excludes_it(
 
 @pytest.mark.asyncio
 async def test_chat_outcome_flips_from_grounded_to_insufficient_after_deletion(
-    db_async_client, db_session
+    db_async_client, db_session, default_tenant
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     headers = {"authorization": f"Bearer {token}"}
     question = "Jakie sa godziny otwarcia Albertos?"
 

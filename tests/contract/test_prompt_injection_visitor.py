@@ -24,6 +24,7 @@ from shiruno.persistence.models import (
     DocumentChunk,
     DocumentStatus,
     KnowledgeDocument,
+    Tenant,
 )
 from tests.fixtures.prompt_injection import (
     MIXED_INTENT_INJECTION_MESSAGE,
@@ -64,12 +65,16 @@ async def test_mixed_intent_injection_reaching_the_llm_never_contaminates_the_sy
     db_async_client, db_session, fake_embedding_provider, fake_llm_provider
 ) -> None:
     question = MIXED_INTENT_INJECTION_MESSAGE
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    tenant = Tenant(name=f"Tenant {uuid.uuid4()}", slug=f"tenant-{uuid.uuid4()}")
+    db_session.add(tenant)
+    db_session.flush()
+    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=tenant.id)
     db_session.add(admin)
     db_session.flush()
     document = KnowledgeDocument(
         original_filename="godziny.txt",
         uploaded_by_admin_id=admin.id,
+        tenant_id=tenant.id,
         status=DocumentStatus.ready,
     )
     db_session.add(document)

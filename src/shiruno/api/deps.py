@@ -23,7 +23,7 @@ from shiruno.config import get_settings
 from shiruno.infra.concurrency import ChatConcurrencyGuard
 from shiruno.infra.security import verify_access_token
 from shiruno.persistence.database import get_session
-from shiruno.persistence.models import Administrator
+from shiruno.persistence.models import Administrator, Tenant, TenantStatus
 from shiruno.providers.embedding.protocol import EmbeddingProvider
 from shiruno.providers.llm.protocol import LLMProvider
 
@@ -113,3 +113,21 @@ def get_current_administrator(
         raise UnauthorizedError(_GENERIC_AUTH_FAILURE)
 
     return administrator
+
+
+def get_current_tenant(
+    current_admin: Administrator = Depends(get_current_administrator),
+    session: Session = Depends(get_session),
+) -> Tenant:
+    """Resolves tenant context exclusively from the authenticated
+    administrator's own `tenant_id` (constitution Principle II, feature
+    009-admin-platform-foundation) — never from any client-supplied value.
+    A missing or `inactive` tenant raises the exact same generic
+    `UnauthorizedError` as a missing/invalid token (FR-016, FR-017,
+    FR-018): a deactivated tenant is indistinguishable from the outside.
+    """
+    tenant = session.get(Tenant, current_admin.tenant_id)
+    if tenant is None or tenant.status != TenantStatus.active:
+        raise UnauthorizedError(_GENERIC_AUTH_FAILURE)
+
+    return tenant

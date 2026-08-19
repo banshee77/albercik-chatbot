@@ -53,6 +53,7 @@ def login(payload: LoginRequest, session: Session = Depends(get_session)) -> Log
         outcome="success",
         administrator_id=administrator.id,
         username=administrator.username,
+        tenant_id=administrator.tenant_id,
     )
     return LoginResponse(
         access_token=issued.access_token, token_type="bearer", expires_in=issued.expires_in

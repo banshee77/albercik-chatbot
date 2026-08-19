@@ -24,8 +24,8 @@ from tests.fixtures.admin import seed_admin_and_token
 
 
 @pytest.mark.asyncio
-async def test_non_txt_extension_is_rejected(db_async_client, db_session) -> None:
-    token = seed_admin_and_token(db_session)
+async def test_non_txt_extension_is_rejected(db_async_client, db_session, default_tenant) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
 
     response = await db_async_client.post(
         "/api/v1/documents",
@@ -37,8 +37,8 @@ async def test_non_txt_extension_is_rejected(db_async_client, db_session) -> Non
 
 
 @pytest.mark.asyncio
-async def test_invalid_utf8_is_rejected(db_async_client, db_session) -> None:
-    token = seed_admin_and_token(db_session)
+async def test_invalid_utf8_is_rejected(db_async_client, db_session, default_tenant) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
 
     response = await db_async_client.post(
         "/api/v1/documents",
@@ -50,8 +50,8 @@ async def test_invalid_utf8_is_rejected(db_async_client, db_session) -> None:
 
 
 @pytest.mark.asyncio
-async def test_empty_file_is_rejected(db_async_client, db_session) -> None:
-    token = seed_admin_and_token(db_session)
+async def test_empty_file_is_rejected(db_async_client, db_session, default_tenant) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
 
     response = await db_async_client.post(
         "/api/v1/documents",
@@ -63,8 +63,10 @@ async def test_empty_file_is_rejected(db_async_client, db_session) -> None:
 
 
 @pytest.mark.asyncio
-async def test_whitespace_only_file_is_rejected(db_async_client, db_session) -> None:
-    token = seed_admin_and_token(db_session)
+async def test_whitespace_only_file_is_rejected(
+    db_async_client, db_session, default_tenant
+) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
 
     response = await db_async_client.post(
         "/api/v1/documents",
@@ -76,8 +78,10 @@ async def test_whitespace_only_file_is_rejected(db_async_client, db_session) -> 
 
 
 @pytest.mark.asyncio
-async def test_oversized_file_is_rejected(db_async_client, db_session, monkeypatch) -> None:
-    token = seed_admin_and_token(db_session)
+async def test_oversized_file_is_rejected(
+    db_async_client, db_session, default_tenant, monkeypatch
+) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     monkeypatch.setenv("MAX_UPLOAD_SIZE_BYTES", "10")
     get_settings.cache_clear()
 
@@ -94,9 +98,9 @@ async def test_oversized_file_is_rejected(db_async_client, db_session, monkeypat
 
 @pytest.mark.asyncio
 async def test_oversized_upload_rejected_without_processing_embedding_or_storing(
-    db_async_client, db_session, fake_embedding_provider, monkeypatch
+    db_async_client, db_session, default_tenant, fake_embedding_provider, monkeypatch
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     monkeypatch.setenv("MAX_UPLOAD_SIZE_BYTES", "1000")
     get_settings.cache_clear()
 
@@ -126,9 +130,9 @@ async def test_oversized_upload_rejected_without_processing_embedding_or_storing
 
 @pytest.mark.asyncio
 async def test_valid_file_larger_than_one_read_chunk_still_uploads(
-    db_async_client, db_session
+    db_async_client, db_session, default_tenant
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
 
     # ~100 KB, comfortably bigger than the 64 KiB bounded-read chunk size,
     # well under the default 5 MB MAX_UPLOAD_SIZE_BYTES.
@@ -156,9 +160,9 @@ async def test_valid_file_larger_than_one_read_chunk_still_uploads(
 
 @pytest.mark.asyncio
 async def test_path_traversal_style_filename_is_accepted_and_stored_safely(
-    db_async_client, db_session
+    db_async_client, db_session, default_tenant
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     traversal_filename = "../../etc/passwd.txt"
 
     response = await db_async_client.post(

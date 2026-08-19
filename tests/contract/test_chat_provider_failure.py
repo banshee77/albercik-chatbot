@@ -22,17 +22,20 @@ from shiruno.providers.llm.protocol import LLMProviderError
 
 @pytest.mark.asyncio
 async def test_llm_provider_failure_is_called_exactly_once_by_ask_question(
-    db_async_client, db_session, fake_llm_provider, fake_embedding_provider
+    db_async_client, db_session, default_tenant, fake_llm_provider, fake_embedding_provider
 ) -> None:
     fake_llm_provider.error = LLMProviderError("simulated post-retry provider failure")
 
     question = "Jakie są godziny otwarcia biura Albertos?"
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    admin = Administrator(
+        username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=default_tenant.id
+    )
     db_session.add(admin)
     db_session.flush()
     document = KnowledgeDocument(
         original_filename="godziny.txt",
         uploaded_by_admin_id=admin.id,
+        tenant_id=default_tenant.id,
         status=DocumentStatus.ready,
     )
     db_session.add(document)

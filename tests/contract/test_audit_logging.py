@@ -15,9 +15,13 @@ from tests.fixtures.admin import seed_admin_and_token
 
 @pytest.mark.asyncio
 async def test_login_success_and_failure_are_both_audit_logged(
-    db_async_client, db_session, caplog
+    db_async_client, db_session, default_tenant, caplog
 ) -> None:
-    admin = Administrator(username="audit-admin", password_hash=hash_password("correct-pw"))
+    admin = Administrator(
+        username="audit-admin",
+        password_hash=hash_password("correct-pw"),
+        tenant_id=default_tenant.id,
+    )
     db_session.add(admin)
     db_session.flush()
 
@@ -32,15 +36,16 @@ async def test_login_success_and_failure_are_both_audit_logged(
     assert ok.status_code == 200
     assert bad.status_code == 401
     messages = [r.message for r in caplog.records if r.name == "shiruno.audit"]
-    assert any("login_success" in m and "audit-admin" in m for m in messages)
+    tenant_id = str(default_tenant.id)
+    assert any("login_success" in m and "audit-admin" in m and tenant_id in m for m in messages)
     assert any("login_failure" in m and "audit-admin" in m for m in messages)
 
 
 @pytest.mark.asyncio
 async def test_document_upload_and_delete_are_audit_logged(
-    db_async_client, db_session, caplog
+    db_async_client, db_session, default_tenant, caplog
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     headers = {"authorization": f"Bearer {token}"}
 
     with caplog.at_level(logging.INFO, logger="shiruno.audit"):
@@ -57,16 +62,21 @@ async def test_document_upload_and_delete_are_audit_logged(
     assert upload_response.status_code == 201
     assert delete_response.status_code == 204
     messages = [r.message for r in caplog.records if r.name == "shiruno.audit"]
-    assert any("document_upload" in m and document_id in m for m in messages)
-    assert any("document_delete" in m and document_id in m for m in messages)
+    tenant_id = str(default_tenant.id)
+    assert any("document_upload" in m and document_id in m and tenant_id in m for m in messages)
+    assert any("document_delete" in m and document_id in m and tenant_id in m for m in messages)
 
 
 @pytest.mark.asyncio
-async def test_audit_log_never_contains_the_password(db_async_client, db_session, caplog) -> None:
+async def test_audit_log_never_contains_the_password(
+    db_async_client, db_session, default_tenant, caplog
+) -> None:
     secret_password = "extremely-secret-password-should-never-appear"
 
     admin = Administrator(
-        username="password-check-admin", password_hash=hash_password(secret_password)
+        username="password-check-admin",
+        password_hash=hash_password(secret_password),
+        tenant_id=default_tenant.id,
     )
     db_session.add(admin)
     db_session.flush()

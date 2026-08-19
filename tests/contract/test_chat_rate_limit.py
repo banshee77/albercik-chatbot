@@ -4,16 +4,23 @@ before either provider is ever touched, identically for a Public User and
 an authenticated Administrator (US3.7-style parity, requirement #11).
 """
 
+import uuid
+
 import pytest
 
 from shiruno.config import get_settings
 from shiruno.infra.security import hash_password, issue_access_token
-from shiruno.persistence.models import Administrator
+from shiruno.persistence.models import Administrator, Tenant
 
 
 def _seed_admin_token(db_session) -> str:
     settings = get_settings()
-    admin = Administrator(username="rl-admin", password_hash=hash_password("irrelevant"))
+    tenant = Tenant(name="RL Tenant", slug=f"rl-tenant-{uuid.uuid4()}")
+    db_session.add(tenant)
+    db_session.flush()
+    admin = Administrator(
+        username="rl-admin", password_hash=hash_password("irrelevant"), tenant_id=tenant.id
+    )
     db_session.add(admin)
     db_session.flush()
     issued = issue_access_token(

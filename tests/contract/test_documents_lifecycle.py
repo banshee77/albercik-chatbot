@@ -12,9 +12,9 @@ from tests.fixtures.admin import seed_admin_and_token
 
 @pytest.mark.asyncio
 async def test_uploaded_document_appears_in_list_then_delete_removes_it(
-    db_async_client, db_session
+    db_async_client, db_session, default_tenant
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     headers = {"authorization": f"Bearer {token}"}
 
     upload_response = await db_async_client.post(
@@ -40,8 +40,10 @@ async def test_uploaded_document_appears_in_list_then_delete_removes_it(
 
 
 @pytest.mark.asyncio
-async def test_delete_unknown_document_returns_404(db_async_client, db_session) -> None:
-    token = seed_admin_and_token(db_session)
+async def test_delete_unknown_document_returns_404(
+    db_async_client, db_session, default_tenant
+) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
 
     response = await db_async_client.delete(
         f"/api/v1/documents/{uuid.uuid4()}", headers={"authorization": f"Bearer {token}"}
@@ -51,8 +53,10 @@ async def test_delete_unknown_document_returns_404(db_async_client, db_session) 
 
 
 @pytest.mark.asyncio
-async def test_delete_already_deleted_document_returns_404(db_async_client, db_session) -> None:
-    token = seed_admin_and_token(db_session)
+async def test_delete_already_deleted_document_returns_404(
+    db_async_client, db_session, default_tenant
+) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     headers = {"authorization": f"Bearer {token}"}
 
     upload_response = await db_async_client.post(

@@ -25,6 +25,7 @@ from shiruno.persistence.models import (
     KnowledgeDocument,
     ProviderKind,
     ProviderName,
+    Tenant,
     UsageRecord,
 )
 from shiruno.providers.llm.protocol import LLMResult
@@ -35,13 +36,17 @@ _ANSWER_CONTENT = "Biuro Albertos jest otwarte od poniedziałku do piątku, w go
 
 
 def _seed_document_with_chunk(db_session, *, filename: str, content: str, embedding: list[float]):
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    tenant = Tenant(name=f"Tenant {uuid.uuid4()}", slug=f"tenant-{uuid.uuid4()}")
+    db_session.add(tenant)
+    db_session.flush()
+    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=tenant.id)
     db_session.add(admin)
     db_session.flush()
 
     document = KnowledgeDocument(
         original_filename=filename,
         uploaded_by_admin_id=admin.id,
+        tenant_id=tenant.id,
         status=DocumentStatus.ready,
     )
     db_session.add(document)

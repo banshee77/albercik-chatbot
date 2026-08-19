@@ -15,7 +15,8 @@ from sqlalchemy import func, select
 
 from shiruno.config import get_settings
 from shiruno.infra.security import issue_access_token
-from shiruno.persistence.models import Administrator, KnowledgeDocument
+from shiruno.persistence.models import Administrator, KnowledgeDocument, TenantStatus
+from tests.fixtures.admin import seed_admin_and_token, seed_tenant
 
 
 @pytest.mark.asyncio
@@ -75,8 +76,10 @@ async def test_delete_with_invalid_token_is_rejected(db_async_client) -> None:
 
 
 @pytest.mark.asyncio
-async def test_expired_token_is_rejected(db_async_client, db_session) -> None:
-    admin = Administrator(username="expired-token-admin", password_hash="x")
+async def test_expired_token_is_rejected(db_async_client, db_session, default_tenant) -> None:
+    admin = Administrator(
+        username="expired-token-admin", password_hash="x", tenant_id=default_tenant.id
+    )
     db_session.add(admin)
     db_session.flush()
 
@@ -96,8 +99,12 @@ async def test_expired_token_is_rejected(db_async_client, db_session) -> None:
 
 
 @pytest.mark.asyncio
-async def test_deactivated_administrator_token_is_rejected(db_async_client, db_session) -> None:
-    admin = Administrator(username="soon-inactive-admin", password_hash="x")
+async def test_deactivated_administrator_token_is_rejected(
+    db_async_client, db_session, default_tenant
+) -> None:
+    admin = Administrator(
+        username="soon-inactive-admin", password_hash="x", tenant_id=default_tenant.id
+    )
     db_session.add(admin)
     db_session.flush()
 
@@ -120,3 +127,130 @@ async def test_deactivated_administrator_token_is_rejected(db_async_client, db_s
     )
 
     assert response.status_code == 401
+
+
+# --- Feature 009-admin-platform-foundation, User Story 3: cross-tenant
+# isolation on the existing document endpoints (FR-013, FR-015, FR-018,
+# FR-024, spec Testing Requirements #10, #13). ---
+
+
+@pytest.mark.asyncio
+async def test_administrator_only_sees_own_tenants_documents_in_list(
+    db_async_client, db_session, default_tenant
+) -> None:
+    other_tenant = seed_tenant(db_session)
+    own_token = seed_admin_and_token(db_session, tenant_id=default_tenant.id, username="own-admin")
+    other_token = seed_admin_and_token(
+        db_session, tenant_id=other_tenant.id, username="other-admin"
+    )
+
+    upload_response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("own.txt", b"Tresc dokumentu wlasciciela.", "text/plain")},
+        headers={"authorization": f"Bearer {own_token}"},
+    )
+    assert upload_response.status_code == 201
+    own_document_id = upload_response.json()["id"]
+
+    own_list = await db_async_client.get(
+        "/api/v1/documents", headers={"authorization": f"Bearer {own_token}"}
+    )
+    other_list = await db_async_client.get(
+        "/api/v1/documents", headers={"authorization": f"Bearer {other_token}"}
+    )
+
+    assert any(doc["id"] == own_document_id for doc in own_list.json())
+    assert all(doc["id"] != own_document_id for doc in other_list.json())
+
+
+@pytest.mark.asyncio
+async def test_deleting_another_tenants_document_returns_404_and_leaves_it_intact(
+    db_async_client, db_session, default_tenant
+) -> None:
+    other_tenant = seed_tenant(db_session)
+    owner_token = seed_admin_and_token(
+        db_session, tenant_id=default_tenant.id, username="owner-admin"
+    )
+    attacker_token = seed_admin_and_token(
+        db_session, tenant_id=other_tenant.id, username="attacker-admin"
+    )
+
+    upload_response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("owner.txt", b"Tresc dokumentu wlasciciela.", "text/plain")},
+        headers={"authorization": f"Bearer {owner_token}"},
+    )
+    document_id = upload_response.json()["id"]
+
+    delete_attempt = await db_async_client.delete(
+        f"/api/v1/documents/{document_id}", headers={"authorization": f"Bearer {attacker_token}"}
+    )
+    assert delete_attempt.status_code == 404
+
+    owner_list = await db_async_client.get(
+        "/api/v1/documents", headers={"authorization": f"Bearer {owner_token}"}
+    )
+    assert any(doc["id"] == document_id for doc in owner_list.json())
+
+
+@pytest.mark.asyncio
+async def test_client_supplied_tenant_identifier_has_no_effect_on_documents_routes(
+    db_async_client, db_session, default_tenant
+) -> None:
+    other_tenant = seed_tenant(db_session)
+    token = seed_admin_and_token(
+        db_session, tenant_id=default_tenant.id, username="no-override-admin"
+    )
+
+    header_response = await db_async_client.get(
+        "/api/v1/documents",
+        headers={"authorization": f"Bearer {token}", "X-Tenant-Id": str(other_tenant.id)},
+    )
+    query_response = await db_async_client.get(
+        f"/api/v1/documents?tenant_id={other_tenant.id}",
+        headers={"authorization": f"Bearer {token}"},
+    )
+
+    assert header_response.status_code == 200
+    assert query_response.status_code == 200
+
+    upload_response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("test.txt", b"Tresc.", "text/plain")},
+        data={"tenant_id": str(other_tenant.id)},
+        headers={"authorization": f"Bearer {token}"},
+    )
+    assert upload_response.status_code == 201
+    document = db_session.get(KnowledgeDocument, uuid.UUID(upload_response.json()["id"]))
+    assert document.tenant_id == default_tenant.id
+    assert document.tenant_id != other_tenant.id
+
+
+@pytest.mark.asyncio
+async def test_deactivated_tenant_denies_document_access(
+    db_async_client, db_session, default_tenant
+) -> None:
+    token = seed_admin_and_token(
+        db_session, tenant_id=default_tenant.id, username="soon-inactive-tenant-admin"
+    )
+    # The token itself, and the administrator account, remain perfectly
+    # valid — only the tenant's status changes (no supported operation to
+    # do this exists, Clarifications 2026-08-19; this is direct test setup).
+    default_tenant.status = TenantStatus.inactive
+    db_session.flush()
+
+    list_response = await db_async_client.get(
+        "/api/v1/documents", headers={"authorization": f"Bearer {token}"}
+    )
+    upload_response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("test.txt", b"Tresc.", "text/plain")},
+        headers={"authorization": f"Bearer {token}"},
+    )
+    delete_response = await db_async_client.delete(
+        f"/api/v1/documents/{uuid.uuid4()}", headers={"authorization": f"Bearer {token}"}
+    )
+
+    assert list_response.status_code == 401
+    assert upload_response.status_code == 401
+    assert delete_response.status_code == 401

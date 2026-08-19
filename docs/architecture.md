@@ -29,17 +29,20 @@ only — nothing under a **(future)** heading is implemented yet.
                  │ Embeddings       │
                  │ LLM providers    │
                  │ Persistence      │
+                 │ Tenant           │
+                 │ Admin API        │
+                 │  foundation      │
                  └────────┬─────────┘
-                          │
-                    Public Chat API
-                     (/api/v1/chat)
-                          │
-                          ▼
-                 Shiruno Chat Widget
-                          │
-                          ▼
-                       Albertos
-              (only customer today)
+                     ┌────┴────┐
+              Public Chat API   Admin API
+               (/api/v1/chat)  (/api/v1/admin/me)
+                     │              │
+                     ▼              ▼
+             Shiruno Chat Widget   authenticated
+                     │              Administrator
+                     ▼              (tenant-scoped)
+                  Albertos
+        (tenant #1 / reference implementation)
 ```
 
 Today, one deployable Python package (`shiruno`, importable from
@@ -48,7 +51,7 @@ reference implementation built on it:
 
 | Module | Layer | Reusable? |
 |---|---|---|
-| `shiruno.api` | HTTP routing, request/response schemas, error mapping | **Shiruno Platform** — yes |
+| `shiruno.api` | HTTP routing, request/response schemas, error mapping, including the authenticated admin API foundation (`/api/v1/admin/me`) | **Shiruno Platform** — yes |
 | `shiruno.application` | Use-case orchestration (ask question, upload/list/delete document) | **Shiruno Platform** — yes |
 | `shiruno.domain` | Chunking, retrieval, prompting, scope, small-talk classification | **Shiruno Platform** — yes |
 | `shiruno.persistence` | SQLAlchemy models, session, repositories | **Shiruno Platform** — yes |
@@ -79,9 +82,15 @@ instead of by directory location.
 ### Runtime stack (current)
 
 - **API**: FastAPI (Python 3.14), single backend service.
-- **Database**: PostgreSQL + `pgvector`, single-tenant (one Albertos
-  knowledge base; no `organization_id`/tenant table — see the
-  constitution's Tenancy Posture principle).
+- **Database**: PostgreSQL + `pgvector`. Multi-tenant as of Feature 009
+  (Admin Platform Foundation & Tenant Boundary): a first-class `Tenant`
+  table, with `Administrator` and `KnowledgeDocument` each owned by
+  exactly one tenant — see the constitution's Multi-Tenant Isolation by
+  Default principle (amended 2026-08-19, v4.0.0). Albertos is tenant #1;
+  the Albertos knowledge base is the only tenant-owned knowledge base with
+  real production data today. `DocumentChunk`, `UsageRecord`, and
+  `RateLimitWindow` remain tenant-unaware for now (not yet part of the
+  customer-facing administration boundary).
 - **Embeddings**: local `sentence-transformers`
   (`intfloat/multilingual-e5-small`), pre-baked into the Docker image.
 - **LLM**: `ollama` (local, default) or `anthropic` (Claude), selected
@@ -147,10 +156,11 @@ requires designing a stable, versioned public widget protocol/CDN
 distribution — a deliberate, separate future feature, not a byproduct of
 Feature 008's rename.
 
-## Future: Shiruno Platform / Customer Admin
+## Current: Admin Platform Foundation
 
-Not implemented in Feature 008. No tenant model, authentication redesign,
-admin endpoint, or admin UI exists yet — see the Explicit Non-Goals below.
+Feature 009 (Admin Platform Foundation & Tenant Boundary) implemented the
+backend/security foundation the future Shiruno Platform / Customer Admin
+frontend (below) will consume:
 
 ```text
                  ┌──────────────────┐
@@ -158,27 +168,62 @@ admin endpoint, or admin UI exists yet — see the Explicit Non-Goals below.
                  └────────┬─────────┘
                           │
                       Admin API
+                    (/api/v1/admin/me)
                           │
                           ▼
-                  Shiruno Platform
-                 Customer Admin UI
+              authenticated Administrator
+                  (tenant-scoped)
 ```
 
-The future **Shiruno Platform / Customer Admin** is a tenant-aware
-administration application (anticipated frontend: React + TypeScript)
-giving each customer:
+What exists today:
 
-- Authentication (replacing today's single-tier, CLI-provisioned admin
-  account).
-- Tenant-scoped knowledge management.
+- `Tenant` as a first-class, persisted entity — Albertos is tenant #1,
+  bootstrapped by an Alembic migration.
+- Every `Administrator` belongs to exactly one tenant (`tenant_id`, required).
+- Authentication (`POST /api/v1/auth/login`, unchanged) resolves tenant
+  context server-side afterward — never from client-supplied input.
+- A reusable `get_current_administrator` → `get_current_tenant` FastAPI
+  dependency boundary, ready for future admin routes to depend on without
+  reimplementing tenant lookup.
+- `GET /api/v1/admin/me` — a minimal authenticated endpoint proving that
+  boundary, returning only the caller's own safe administrator/tenant
+  identity.
+- Existing admin document upload/list/delete are tenant-scoped: an
+  administrator only ever sees, and can only ever affect, their own
+  tenant's documents.
+- `shiruno.cli create-tenant` / `create-admin --tenant <slug>` —
+  out-of-band, no HTTP endpoint provisions either.
+- Cross-tenant isolation is proven by automated tests (see
+  `specs/009-admin-platform-foundation/`), consistent with the
+  constitution's Multi-Tenant Isolation by Default principle.
+
+What is still future — **not** implemented by Feature 009:
+
+- Knowledge Base Administration UI (tenant-scoped document management
+  beyond the existing upload/list/delete — Feature 010).
+- Conversations & Analytics.
+- The React + TypeScript Customer Admin frontend itself (`admin.shiruno.com`).
+- Multi-customer public chat widget routing (`/api/v1/chat` stays
+  Albertos-only and tenant-unaware, unchanged).
+- Platform-wide super-admin.
+- Billing, subscriptions, usage plans.
+
+## Future: Shiruno Platform / Customer Admin (frontend)
+
+The future **Shiruno Platform / Customer Admin** is the not-yet-built
+React + TypeScript frontend that will consume the Admin API foundation
+above, giving each customer:
+
+- Sign-in through the existing/extended authentication.
+- Tenant-scoped knowledge management (Feature 010).
 - Conversation visibility.
 - Analytics.
 - Assistant configuration.
 - Monitoring.
 
-This is the subject of **Feature 009 — Admin Platform Foundation & Tenant
-Boundary**, which starts after Feature 008 and is explicitly out of this
-feature's scope.
+No frontend code, admin UI, or additional admin endpoints beyond
+`GET /api/v1/admin/me` exist yet — this remains forward-looking direction
+only, to be delivered incrementally starting with Feature 010.
 
 ## Explicit non-goals of Feature 008
 

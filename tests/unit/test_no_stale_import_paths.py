@@ -12,6 +12,7 @@ import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+_THIS_FILE_RELATIVE_PATH = Path(__file__).resolve().relative_to(REPO_ROOT).as_posix()
 
 _HISTORICAL_SPEC_RE = re.compile(r"^specs/00[1-7]-")
 
@@ -34,6 +35,11 @@ def test_no_stale_albercik_chatbot_import_path_remains() -> None:
     offending: list[str] = []
     for relative_path in tracked_files:
         if _HISTORICAL_SPEC_RE.match(relative_path):
+            continue
+        # This file legitimately names the old import path in its own
+        # docstring/test name to describe what it guards against — not a
+        # stale reference to fix.
+        if relative_path == _THIS_FILE_RELATIVE_PATH:
             continue
         if (
             not relative_path.endswith((".py", ".toml", ".ini", ".yml", ".yaml", ".cfg", ".sh"))

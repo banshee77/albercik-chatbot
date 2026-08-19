@@ -1,7 +1,12 @@
 """ORM models — data-model.md.
 
-Single-tenant per constitution Principle II: no `organization_id` or tenant
-column appears anywhere below.
+Multi-tenant per constitution Principle II (amended 2026-08-19, v4.0.0):
+`Tenant` is a first-class security boundary. `Administrator` and
+`KnowledgeDocument` carry a required `tenant_id` FK — see feature
+009-admin-platform-foundation's data-model.md. `DocumentChunk`,
+`UsageRecord`, and `RateLimitWindow` remain tenant-unaware (Principle II
+Rule 10 — not retroactively tenant-owned; neither has an admin-facing
+per-tenant view today).
 """
 
 import enum
@@ -66,6 +71,34 @@ class ProviderName(enum.StrEnum):
     local_sentence_transformer = "local_sentence_transformer"
 
 
+class TenantStatus(enum.StrEnum):
+    active = "active"
+    inactive = "inactive"
+
+
+class Tenant(Base):
+    """A customer of the Shiruno platform — first-class security boundary
+    (constitution Principle II, feature 009-admin-platform-foundation).
+    Albertos is tenant #1. No supported operation in this feature
+    transitions `status` from `active` to `inactive` — see data-model.md.
+    """
+
+    __tablename__ = "tenants"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    slug: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    status: Mapped[TenantStatus] = mapped_column(
+        Enum(TenantStatus, name="tenant_status", values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=TenantStatus.active,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class Administrator(Base):
     __tablename__ = "administrators"
 
@@ -74,6 +107,7 @@ class Administrator(Base):
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("tenants.id"), nullable=False)
 
 
 class KnowledgeDocument(Base):
@@ -84,6 +118,7 @@ class KnowledgeDocument(Base):
     uploaded_by_admin_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("administrators.id"), nullable=False
     )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("tenants.id"), nullable=False)
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

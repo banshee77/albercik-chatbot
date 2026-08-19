@@ -47,6 +47,7 @@ def upload_document(
     session: Session,
     embedding_provider: EmbeddingProvider,
     uploaded_by: Administrator,
+    tenant_id: uuid.UUID,
     max_upload_size_bytes: int,
     chunk_size_chars: int,
     chunk_overlap_chars: int,
@@ -82,6 +83,7 @@ def upload_document(
     document = KnowledgeDocument(
         original_filename=filename,
         uploaded_by_admin_id=uploaded_by.id,
+        tenant_id=tenant_id,
         status=DocumentStatus.processing,
     )
     session.add(document)

@@ -18,19 +18,24 @@ from shiruno.persistence.models import (
     DocumentChunk,
     DocumentStatus,
     KnowledgeDocument,
+    Tenant,
 )
 from shiruno.persistence.repositories import search_similar_chunks
 from tests.fakes.fake_embedding_provider import FakeEmbeddingProvider
 
 
 def _seed_document(db_session, *, filename: str, deleted: bool = False) -> KnowledgeDocument:
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    tenant = Tenant(name=f"Tenant {uuid.uuid4()}", slug=f"tenant-{uuid.uuid4()}")
+    db_session.add(tenant)
+    db_session.flush()
+    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=tenant.id)
     db_session.add(admin)
     db_session.flush()
 
     document = KnowledgeDocument(
         original_filename=filename,
         uploaded_by_admin_id=admin.id,
+        tenant_id=tenant.id,
         status=DocumentStatus.ready,
         deleted_at=datetime.now(UTC) if deleted else None,
     )

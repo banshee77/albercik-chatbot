@@ -12,7 +12,7 @@ import uuid
 from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy.orm import Session
 
-from shiruno.api.deps import get_current_administrator, get_embedding_provider
+from shiruno.api.deps import get_current_administrator, get_current_tenant, get_embedding_provider
 from shiruno.api.errors import NotFoundAppError, PayloadTooLargeError
 from shiruno.api.schemas import DocumentSummary
 from shiruno.application.delete_document import delete_document
@@ -21,7 +21,7 @@ from shiruno.application.upload_document import upload_document
 from shiruno.config import get_settings
 from shiruno.infra.audit import log_audit_event
 from shiruno.persistence.database import get_session
-from shiruno.persistence.models import Administrator, DocumentStatus, KnowledgeDocument
+from shiruno.persistence.models import Administrator, DocumentStatus, KnowledgeDocument, Tenant
 from shiruno.providers.embedding.protocol import EmbeddingProvider
 
 router = APIRouter(prefix="/api/v1", tags=["documents"])
@@ -77,6 +77,7 @@ async def post_document(
     session: Session = Depends(get_session),
     embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
     current_admin: Administrator = Depends(get_current_administrator),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ) -> DocumentSummary:
     settings = get_settings()
     content_bytes = await _read_upload_bounded(file, max_size_bytes=settings.MAX_UPLOAD_SIZE_BYTES)
@@ -86,6 +87,7 @@ async def post_document(
         session=session,
         embedding_provider=embedding_provider,
         uploaded_by=current_admin,
+        tenant_id=current_tenant.id,
         max_upload_size_bytes=settings.MAX_UPLOAD_SIZE_BYTES,
         chunk_size_chars=settings.CHUNK_SIZE_CHARS,
         chunk_overlap_chars=settings.CHUNK_OVERLAP_CHARS,
@@ -96,6 +98,7 @@ async def post_document(
         outcome="success" if document.status == DocumentStatus.ready else "failure",
         administrator_id=current_admin.id,
         document_id=document.id,
+        tenant_id=current_tenant.id,
     )
     return _to_summary(document)
 
@@ -104,8 +107,10 @@ async def post_document(
 def get_documents(
     session: Session = Depends(get_session),
     current_admin: Administrator = Depends(get_current_administrator),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ) -> list[DocumentSummary]:
-    return [_to_summary(document) for document in list_documents(session)]
+    documents = list_documents(session, tenant_id=current_tenant.id)
+    return [_to_summary(document) for document in documents]
 
 
 @router.delete("/documents/{document_id}", status_code=204)
@@ -113,15 +118,17 @@ def delete_document_route(
     document_id: uuid.UUID,
     session: Session = Depends(get_session),
     current_admin: Administrator = Depends(get_current_administrator),
+    current_tenant: Tenant = Depends(get_current_tenant),
 ) -> None:
     try:
-        delete_document(document_id, session=session)
+        delete_document(document_id, session=session, tenant_id=current_tenant.id)
     except NotFoundAppError:
         log_audit_event(
             "document_delete",
             outcome="not_found",
             administrator_id=current_admin.id,
             document_id=document_id,
+            tenant_id=current_tenant.id,
         )
         raise
     log_audit_event(
@@ -129,4 +136,5 @@ def delete_document_route(
         outcome="success",
         administrator_id=current_admin.id,
         document_id=document_id,
+        tenant_id=current_tenant.id,
     )

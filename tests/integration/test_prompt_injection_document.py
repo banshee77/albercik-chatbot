@@ -26,9 +26,9 @@ from tests.fixtures.prompt_injection import (
 
 @pytest.mark.asyncio
 async def test_embedded_document_instruction_never_becomes_a_system_instruction(
-    db_async_client, db_session, fake_embedding_provider, fake_llm_provider
+    db_async_client, db_session, default_tenant, fake_embedding_provider, fake_llm_provider
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     upload_response = await db_async_client.post(
         "/api/v1/documents",
         files={
@@ -78,9 +78,9 @@ async def test_embedded_document_instruction_never_becomes_a_system_instruction(
 
 @pytest.mark.asyncio
 async def test_document_attempting_delimiter_breakout_is_neutralized_end_to_end(
-    db_async_client, db_session, fake_embedding_provider, fake_llm_provider
+    db_async_client, db_session, default_tenant, fake_embedding_provider, fake_llm_provider
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     upload_response = await db_async_client.post(
         "/api/v1/documents",
         files={

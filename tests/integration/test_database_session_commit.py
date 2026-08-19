@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session as OrmSession
 from shiruno.config import get_settings
 from shiruno.persistence import database
 from shiruno.persistence.database import get_session
-from shiruno.persistence.models import Administrator
+from shiruno.persistence.models import Administrator, Tenant
 
 TEST_DATABASE_URL = "postgresql+psycopg://albercik:albercik@localhost:5433/albercik_test"
 
@@ -60,7 +60,10 @@ def test_get_session_commits_pending_work_on_success(db_engine, monkeypatch) -> 
 
     generator = get_session()
     session = next(generator)
-    session.add(Administrator(username=username, password_hash="x"))
+    tenant = Tenant(name=f"Tenant {username}", slug=f"tenant-{username}")
+    session.add(tenant)
+    session.flush()
+    session.add(Administrator(username=username, password_hash="x", tenant_id=tenant.id))
     session.flush()  # visible within this session, NOT yet durable
 
     # Mirrors FastAPI advancing the generator past `yield` once the route
@@ -84,7 +87,10 @@ def test_get_session_rolls_back_on_exception(db_engine, monkeypatch) -> None:
 
     generator = get_session()
     session = next(generator)
-    session.add(Administrator(username=username, password_hash="x"))
+    tenant = Tenant(name=f"Tenant {username}", slug=f"tenant-{username}")
+    session.add(tenant)
+    session.flush()
+    session.add(Administrator(username=username, password_hash="x", tenant_id=tenant.id))
     session.flush()
 
     # Mirrors FastAPI throwing a route-handler exception into the

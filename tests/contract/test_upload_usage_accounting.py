@@ -14,9 +14,9 @@ from tests.fixtures.admin import seed_admin_and_token
 
 @pytest.mark.asyncio
 async def test_successful_upload_records_one_embedding_usage_row(
-    db_async_client, db_session
+    db_async_client, db_session, default_tenant
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
 
     response = await db_async_client.post(
         "/api/v1/documents",

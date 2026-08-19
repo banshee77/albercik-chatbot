@@ -32,8 +32,13 @@ production-ready.
   (feature 006/007) is embedded in the Albertos website; there is no
   standalone, site-independent widget distribution yet (see "Future:
   Shiruno Widget" in [`docs/architecture.md`](docs/architecture.md)).
-- **Database**: PostgreSQL + `pgvector`, single-tenant (no
-  `organization_id`/tenant table — one Albertos knowledge base).
+- **Database**: PostgreSQL + `pgvector`. Multi-tenant as of Feature 009
+  (Admin Platform Foundation & Tenant Boundary): a first-class `Tenant`
+  table, with `Administrator` and `KnowledgeDocument` each owned by
+  exactly one tenant. Albertos is tenant #1 and, today, the only tenant
+  with real production data — see
+  [`docs/architecture.md`](docs/architecture.md#current-admin-platform-foundation)
+  for the full current-vs-future admin platform picture.
 - **Embeddings**: local `sentence-transformers`
   (`intfloat/multilingual-e5-small`, 384-dim, CPU-only), pre-baked into
   the Docker image at build time — no embedding-provider API key, no
@@ -82,8 +87,12 @@ production-ready.
   never consumes or is capped by that budget. See
   `specs/002-add-ollama-provider/` for the full design.
 - **Admin auth**: JWT (HS256), bcrypt-hashed passwords, a single privilege
-  tier (no roles). Administrator accounts are provisioned out-of-band via
-  a CLI command — there is no self-registration endpoint.
+  tier (no roles). Every administrator belongs to exactly one tenant
+  (feature 009); tenant context is always derived server-side from the
+  authenticated administrator, never from client input. Tenants and
+  administrators are both provisioned out-of-band via CLI commands
+  (`create-tenant`, `create-admin --tenant`) — there is no self-registration
+  endpoint for either.
 - **Cost/abuse controls on `/chat`**: PostgreSQL-backed fixed-window rate
   limiting (no Redis), a configurable hourly LLM usage budget backed by
   `usage_records`, an `LLM_ENABLED` kill switch, a process-local bounded
@@ -175,8 +184,8 @@ automatic local-model provisioning, with a single command:
 ```bash
 uv sync
 docker compose up -d db
-uv run alembic upgrade head
-uv run python -m shiruno.cli create-admin --username admin
+uv run alembic upgrade head    # also bootstraps the Albertos tenant (feature 009)
+uv run python -m shiruno.cli create-admin --tenant albertos --username admin
 docker compose up -d          # brings up ollama + ollama-init (auto model
                                #   provisioning) + app in dependency order
 curl localhost:8000/health
@@ -350,7 +359,7 @@ src/shiruno/                # Shiruno Platform (reusable) + Albertos reference i
 ├── infra/            # Cross-cutting: security, logging, audit, rate limit, budget, concurrency — platform
 ├── public_site/       # Albertos public website, templates, static assets, chat widget front-end
 │                       #   — Albertos reference implementation, NOT part of the reusable platform
-├── cli.py            # `create-admin` out-of-band provisioning command             — platform
+├── cli.py            # `create-tenant`/`create-admin` out-of-band provisioning     — platform
 └── main.py           # FastAPI app factory (composition root)                     — platform
 
 docs/architecture.md    # current + target architecture, future Widget/Admin boundaries

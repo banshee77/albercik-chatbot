@@ -1,3 +1,5 @@
+name: shiruno
+
 services:
   db:
     image: pgvector/pgvector:pg17
@@ -128,4 +130,6 @@ services:
 
 volumes:
   db-data:
+    name: shiruno_db-data
   ollama-data:
+    name: shiruno_ollama-data

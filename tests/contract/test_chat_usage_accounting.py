@@ -25,15 +25,18 @@ from shiruno.providers.llm.protocol import LLMResult
 
 @pytest.mark.asyncio
 async def test_grounded_chat_request_records_one_embedding_and_one_llm_usage_row(
-    db_async_client, db_session, fake_embedding_provider
+    db_async_client, db_session, default_tenant, fake_embedding_provider
 ) -> None:
     question = "Jakie są godziny otwarcia biura Albertos?"
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    admin = Administrator(
+        username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=default_tenant.id
+    )
     db_session.add(admin)
     db_session.flush()
     document = KnowledgeDocument(
         original_filename="godziny.txt",
         uploaded_by_admin_id=admin.id,
+        tenant_id=default_tenant.id,
         status=DocumentStatus.ready,
     )
     db_session.add(document)
@@ -92,15 +95,18 @@ async def test_out_of_scope_request_records_no_usage_rows(db_async_client, db_se
 
 @pytest.mark.asyncio
 async def test_llm_usage_row_persists_provider_metrics_verbatim(
-    db_async_client, db_session, fake_llm_provider, fake_embedding_provider
+    db_async_client, db_session, default_tenant, fake_llm_provider, fake_embedding_provider
 ) -> None:
     question = "Jakie są godziny otwarcia biura Albertos?"
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    admin = Administrator(
+        username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=default_tenant.id
+    )
     db_session.add(admin)
     db_session.flush()
     document = KnowledgeDocument(
         original_filename="godziny.txt",
         uploaded_by_admin_id=admin.id,
+        tenant_id=default_tenant.id,
         status=DocumentStatus.ready,
     )
     db_session.add(document)
@@ -148,18 +154,21 @@ async def test_llm_usage_row_persists_provider_metrics_verbatim(
 
 @pytest.mark.asyncio
 async def test_llm_usage_row_provider_metrics_is_null_when_provider_reports_none(
-    db_async_client, db_session, fake_embedding_provider
+    db_async_client, db_session, default_tenant, fake_embedding_provider
 ) -> None:
     """The default `FakeLLMProvider` response (and, in practice, every
     Anthropic-backed call) has `provider_metrics=None` — the column must
     stay `NULL`, never a fabricated/empty dict (FR-019)."""
     question = "Jakie są godziny otwarcia biura Albertos?"
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    admin = Administrator(
+        username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=default_tenant.id
+    )
     db_session.add(admin)
     db_session.flush()
     document = KnowledgeDocument(
         original_filename="godziny.txt",
         uploaded_by_admin_id=admin.id,
+        tenant_id=default_tenant.id,
         status=DocumentStatus.ready,
     )
     db_session.add(document)

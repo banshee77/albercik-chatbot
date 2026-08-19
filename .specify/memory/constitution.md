@@ -1,35 +1,60 @@
 <!--
 Sync Impact Report
-Version change: 3.1.0 → 3.1.1
-Rationale: PATCH — naming and product-boundary amendment only, reflecting
-  the completed rebrand from "Albercik Chatbot" to "Shiruno." Shiruno is
-  now named as the reusable product/platform; Albertos is clarified as
-  Shiruno's first customer and reference implementation, not the platform
-  name. No principle was added, removed, redefined, or weakened; no
-  NON-NEGOTIABLE rule changed in substance. Per the versioning policy,
-  wording clarifications with no semantic change to a principle are PATCH.
+Version change: 3.1.1 → 4.0.0
+Rationale: MAJOR — Principle II is redefined from "Tenancy Posture
+  (Single-Tenant MVP)", which forbade tenant tables/columns/middleware
+  outright, into "Multi-Tenant Isolation by Default (NON-NEGOTIABLE)",
+  which now mandates tenant isolation as a security default. This reverses
+  the principle's substantive rule (previously: tenant infrastructure is
+  forbidden without a future amendment; now: tenant isolation is required
+  wherever tenant-owned resources exist) rather than merely clarifying it,
+  which the versioning policy classifies as MAJOR ("redefinition of a
+  principle"). Feature 009 (Admin Platform Foundation & Tenant Boundary)
+  is the concrete trigger: it introduces the platform's first real Tenant
+  entity, tenant-owned Administrators, and tenant-scoped authorization.
 Modified principles:
-  - Title and preamble — "Albercik Chatbot Constitution" → "Shiruno
-    Constitution"; preamble now states the Shiruno product identity
-    ("Knowledge that answers." / "turns an organization's knowledge into
-    an assistant its customers can simply ask.") and names Albertos as
-    Shiruno's first customer/reference implementation rather than folding
-    the product and customer names together. No governance or principle
-    substance changed.
-  - II. Tenancy Posture (Single-Tenant MVP) — renamed the product
-    throughout ("Albercik Chatbot" → "Shiruno", including the data-flow
-    diagram's terminal node) and reworded "is intentionally single-tenant
-    for the MVP and serves exclusively Albertos" → "is intentionally
-    single-tenant per deployment for the MVP. Its first deployment serves
-    exclusively Albertos, Shiruno's reference customer" to make the
-    product/customer boundary explicit. The tenancy posture itself
-    (single-tenant MVP, no speculative multi-tenancy, multi-tenancy only
-    via a future amendment) is unchanged.
-  - Decision Priority (closing sentence) — "current Albertos chatbot
-    requirements" → "current Albertos deployment's requirements"; wording
-    only, no change to the priority ordering or its meaning.
-Added principles/sections: none.
-Removed sections: none.
+  - II. Tenancy Posture (Single-Tenant MVP) → II. Multi-Tenant Isolation
+    by Default (NON-NEGOTIABLE) — full redefinition. Old rule: the MVP
+    MUST NOT implement `organization_id` columns, tenant tables, tenant
+    middleware, tenant-aware retrieval, or cross-tenant authorization, and
+    multi-tenancy required a future constitution amendment before any of
+    that could be built. New rule: tenant is a first-class security
+    boundary; every tenant-owned resource and tenant-scoped operation
+    must derive tenant context server-side, enforce isolation on every
+    query/mutation, fail closed on cross-tenant access, avoid leaking
+    another tenant's existence in error responses, and carry automated
+    cross-tenant isolation test coverage. Albertos remains tenant #1 and
+    the reference implementation, but reusable platform code must not
+    assume it is the only tenant. The new principle explicitly does not
+    require every existing single-tenant entity to become multi-tenant
+    retroactively — tenant ownership is introduced per-entity when that
+    entity joins the reusable platform/customer boundary — and it
+    distinguishes tenant administration from any future cross-tenant
+    platform-admin capability, which must be explicitly authorized rather
+    than arising from a bypassed tenant filter.
+Other sections updated for consistency with the redefined Principle II
+(no other principle's substance changed):
+  - MVP Scope Boundaries — removed the "Multi-tenancy / organization
+    abstractions... MUST NOT be speculatively implemented" bullet from
+    "Explicitly not built"; added a "Mandatory now" bullet requiring
+    tenant isolation wherever a resource/operation is tenant-owned,
+    starting with Feature 009's Tenant and Administrator entities; added
+    an "Explicitly deferrable" bullet clarifying that pre-existing
+    single-tenant resources (Knowledge, Conversations, Usage) are not
+    retroactively tenant-owned by this amendment alone.
+  - Development Workflow & Quality Gates — the reviewer instruction to
+    flag any PR that introduces tenant concepts without an amendment is
+    replaced with an instruction to verify tenant isolation is correctly
+    derived server-side, enforced per query/mutation, and test-covered.
+  - Governance / Compliance review — Principle II added to the
+    critical-severity scrutiny list (alongside I, III, V, VI, X, XI); the
+    "flag speculative multi-tenancy infrastructure" instruction replaced
+    with "verify tenant isolation enforcement and flag client-trusted
+    tenant identifiers."
+Added principles/sections: none (principle count unchanged at XIV;
+  Principle II retitled and redefined in place).
+Removed sections: the single-tenant data-flow ASCII diagram previously
+  inside Principle II (no longer accurate).
 Deferred TODOs: none.
 -->
 
@@ -63,44 +88,73 @@ documents, model output) and the Albertos knowledge base. Defaulting to
 make that boundary enforceable and auditable, independent of which cloud
 eventually hosts it.
 
-### II. Tenancy Posture (Single-Tenant MVP)
-Shiruno is intentionally single-tenant per deployment for the MVP. Its
-first deployment serves exclusively Albertos, Shiruno's reference customer,
-with one Albertos knowledge base:
+### II. Multi-Tenant Isolation by Default (NON-NEGOTIABLE)
+Shiruno is a multi-tenant platform. Tenant is a first-class security
+boundary, not an incidental data attribute or something deferred until a
+hypothetical future SaaS pivot. Albertos remains Shiruno's first tenant and
+reference implementation, but no reusable Shiruno platform code MUST assume
+Albertos is the only tenant that exists or will ever exist. The following
+rules govern every tenant-owned resource and every tenant-scoped operation:
 
-```text
-Albertos
-   ↓
-single knowledge base
-   ↓
-documents / chunks / embeddings
-   ↓
-RAG
-   ↓
-Shiruno
-```
+1. Tenant MUST be treated as a first-class security boundary in the
+   platform's architecture, not an incidental column bolted on later.
+2. Every tenant-owned resource MUST be structurally associated with a
+   tenant wherever that resource is, or becomes, part of the reusable
+   platform/customer boundary (see Rule 10 for what this does not yet
+   require).
+3. Tenant context for authenticated administrative operations MUST be
+   derived from the authenticated server-side identity/session/token —
+   never inferred, guessed, or accepted from client-controlled input.
+4. Clients MUST NEVER be trusted to select or override tenant ownership
+   through a request body field, a query parameter, an arbitrary header,
+   or a resource identifier alone.
+5. Every tenant-scoped query and mutation MUST enforce tenant isolation;
+   an authenticated principal belonging to one tenant MUST NOT be able to
+   read, modify, or delete another tenant's data.
+6. Cross-tenant access MUST fail closed: when tenant identity cannot be
+   verified or does not match, the default outcome MUST be denial, never
+   silent success.
+7. Error responses MUST NOT leak the existence or contents of another
+   tenant's resources — a response MUST NOT let a caller distinguish
+   "this resource does not exist" from "this resource exists but belongs
+   to another tenant."
+8. Automated tests MUST explicitly cover cross-tenant isolation for every
+   security-sensitive, tenant-scoped resource, consistent with the
+   mandatory coverage already required by Testing Discipline
+   (Principle XI).
+9. Albertos remains tenant #1 and Shiruno's reference implementation, but
+   no reusable Shiruno platform code MUST assume Albertos is the only
+   tenant.
+10. This principle does NOT require every future product entity to become
+    multi-tenant prematurely. Tenant ownership MUST be introduced for an
+    entity when that entity becomes part of the reusable platform/customer
+    boundary, not speculatively ahead of that need — consistent with
+    Simplicity (Principle XIII). Pre-existing single-tenant entities are
+    not retroactively tenant-owned merely because this principle exists.
+11. Platform-level administration is conceptually distinct from tenant
+    administration. A future Shiruno Platform Admin capability MAY operate
+    across tenants, but any such capability MUST be explicitly authorized
+    as platform-level and MUST NOT arise accidentally from bypassing
+    tenant filters in tenant-scoped code paths. No feature is required to
+    implement full platform-admin capability unless its own specification
+    explicitly requires it.
 
-The MVP MUST NOT implement `organization_id` columns, tenant tables, tenant
-middleware, tenant-aware retrieval, or cross-tenant authorization.
-PostgreSQL Row Level Security is NOT required for tenant isolation in the
-MVP. Cross-tenant tests are NOT required, because the MVP has no tenants.
-None of this is a current requirement while the product serves one
-customer, and it MUST NOT be built speculatively ahead of an actual
-multi-tenant requirement. Multi-tenancy MAY be introduced later as a
-separate, deliberate architectural change if the product evolves into a
-SaaS platform for multiple companies — but that is a future decision
-requiring its own constitution amendment, not something this MVP should
-pre-build. In the meantime, architectural boundaries MUST stay clean enough
-(see Separation of Concerns) that adding multi-tenancy later would not
-require rewriting the entire RAG pipeline.
-**Rationale**: The MVP specification is unambiguous that Shiruno's first
-deployment serves one customer, Albertos, by product design — not as a
-temporary shortcut.
-Mandating multi-tenant infrastructure the product doesn't need would violate
-the Simplicity principle and add real security-review surface (RLS
-policies, tenant-scoping tests) for an abstraction with no current consumer.
-Clean layering is the cheap insurance policy: it makes a future tenancy
-migration additive rather than a rewrite, without paying that cost now.
+**Rationale**: Shiruno now has a real second architectural boundary — the
+tenant — because a concrete, near-term feature (Feature 009) introduces
+Albertos's first sibling tenants rather than a hypothetical one. Making
+tenant isolation a NON-NEGOTIABLE default, instead of something forbidden
+until "actually needed," is what prevents the exact class of bug this
+principle exists to rule out: an admin route that silently trusts a
+client-supplied tenant id, or a query that forgets a
+`WHERE tenant_id = :current_tenant` clause. This mirrors the reasoning
+already applied to Security by Default (Principle I) and Cost Safety
+(Principle X) — a security invariant needs to be a default, not an opt-in
+per endpoint, or it will eventually be forgotten under deadline pressure.
+Rule 10 keeps this from becoming exactly the kind of speculative
+infrastructure Simplicity (Principle XIII) warns against: existing
+single-tenant entities are not force-migrated by this amendment alone —
+they become tenant-owned when a feature spec actually makes them part of
+the platform/customer boundary.
 
 ### III. Secure RAG
 Retrieved documents are untrusted data, never instructions — content
@@ -377,15 +431,14 @@ Mandatory now, from the first commit (never postponed):
   a server-side kill switch (Principle X). The controls themselves are
   mandatory now; tuning their thresholds for real production traffic MAY
   follow (see deferrable list below).
+- Tenant isolation for every tenant-owned resource and tenant-scoped
+  operation (Principle II): server-derived tenant context, fail-closed
+  cross-tenant denial, and automated cross-tenant isolation test coverage
+  are mandatory as soon as a resource or operation is tenant-owned or
+  tenant-scoped — beginning with the Tenant and Administrator entities
+  introduced by Feature 009.
 
 Explicitly not built for the MVP (MUST NOT be speculatively implemented):
-- Multi-tenancy / organization abstractions (Principle II): no
-  `organization_id` column, no tenant tables, no tenant middleware, no
-  tenant-aware retrieval, no cross-tenant authorization or tests, no
-  tenant-specific PostgreSQL Row Level Security. The product currently
-  serves one customer, Albertos; building this ahead of an actual
-  multi-tenant requirement is speculative infrastructure the MVP does not
-  need and MUST NOT carry.
 - Unnecessary architectural abstractions (Principle XII, XIII): factories,
   repositories, abstract base classes, dependency-injection layers, generic
   frameworks, plugin systems, event buses, or domain abstractions not
@@ -415,6 +468,13 @@ decided/implemented later):
   cloud-specific or distributed infrastructure (Principle XIII) —
   explicitly out of scope for the MVP unless a concrete requirement
   justifies them.
+- Retroactive tenant ownership of pre-existing single-tenant resources
+  (Principle II, Rule 10): Knowledge documents/chunks, conversations, and
+  usage records are not made tenant-owned merely because Principle II now
+  exists. Each becomes tenant-owned only when the feature that turns it
+  into customer-facing, tenant-scoped administration says so (e.g., a
+  future Knowledge Base Administration feature) — this amendment mandates
+  the isolation *rule*, not an immediate migration of every table.
 
 Anything not listed above as deferrable is a mandatory invariant and MUST
 NOT be postponed by a feature plan or task list.
@@ -447,16 +507,19 @@ role-based access control (Public User vs. Administrator) is enforced for
 any new or modified knowledge-base management endpoint, and MUST verify
 that core RAG/retrieval code has no direct import of the Anthropic SDK,
 Bedrock SDK, or an embedding vendor's SDK — only the application-level
-interfaces from Principles V and VI. A reviewer MUST also flag any pull
-request that introduces `organization_id` columns, tenant tables, or
-tenant-scoped middleware without a corresponding constitution amendment
-reinstating multi-tenancy as a requirement (Principle II), and any pull
-request touching the public chat endpoint MUST demonstrate that cost/abuse
-controls (Principle X) remain intact. Complexity that deviates from
-Principle XII (Engineering Quality), Principle XIII (Simplicity), or
-Principle XIV (Approved Technology Stack) MUST be explicitly justified in
-the PR description or plan, referencing the concrete requirement that
-demands it.
+interfaces from Principles V and VI. A reviewer MUST also verify that any
+pull request introducing or touching a tenant-owned resource or
+tenant-scoped operation derives tenant context server-side, enforces
+tenant isolation on every affected query and mutation, fails closed on
+cross-tenant access, and includes automated cross-tenant isolation test
+coverage (Principle II) — and MUST flag any tenant-scoped code path that
+trusts a client-supplied tenant identifier from a request body, query
+parameter, or header. Any pull request touching the public chat endpoint
+MUST demonstrate that cost/abuse controls (Principle X) remain intact.
+Complexity that deviates from Principle XII (Engineering Quality),
+Principle XIII (Simplicity), or Principle XIV (Approved Technology Stack)
+MUST be explicitly justified in the PR description or plan, referencing
+the concrete requirement that demands it.
 
 ## Governance
 
@@ -473,16 +536,18 @@ prior informal convention. Amendments are made by editing this file via the
 
 **Compliance review**: Every `/speckit-plan` and `/speckit-tasks` output for
 this project MUST be evaluated against these principles, with particular
-scrutiny on Principles I, III, V, VI, X, and XI, since violations there
-(secrets exposure, prompt-injection escalation, core logic coupled directly
-to a specific LLM/embedding/cloud SDK, uncontrolled cost exposure, missing
-access-control tests) are treated as critical severity. Principle II
-(Tenancy Posture) requires scrutiny in the opposite direction from the
-others: reviewers MUST flag any speculative multi-tenancy infrastructure
-(organization_id columns, tenant tables, tenant-scoped RLS, cross-tenant
-tests) introduced without a corresponding constitution amendment. Any
-exception MUST be documented in the relevant plan's Complexity Tracking
-section with a concrete justification, not merely noted and left
-unresolved.
+scrutiny on Principles I, II, III, V, VI, X, and XI, since violations there
+(secrets exposure, tenant-isolation bypass, prompt-injection escalation,
+core logic coupled directly to a specific LLM/embedding/cloud SDK,
+uncontrolled cost exposure, missing access-control tests) are treated as
+critical severity. For Principle II (Multi-Tenant Isolation by Default)
+specifically, reviewers MUST verify that tenant context is always derived
+server-side, that every tenant-scoped query and mutation enforces
+isolation, that cross-tenant access fails closed, and that automated
+cross-tenant isolation tests exist for every tenant-owned resource — and
+MUST flag any code path that would let a client-supplied tenant identifier
+influence which tenant's data a request can reach. Any exception MUST be
+documented in the relevant plan's Complexity Tracking section with a
+concrete justification, not merely noted and left unresolved.
 
-**Version**: 3.1.1 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-19
+**Version**: 4.0.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-19

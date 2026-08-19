@@ -34,6 +34,7 @@ from shiruno.persistence.models import (
     KnowledgeDocument,
     ProviderKind,
     ProviderName,
+    Tenant,
     UsageRecord,
 )
 from tests.fixtures.provider_app import build_app, client_for
@@ -42,12 +43,16 @@ _QUESTION = "Jakie są godziny otwarcia biura Albertos?"
 
 
 def _seed_answerable_chunk(db_session, fake_embedding_provider) -> None:
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    tenant = Tenant(name=f"Tenant {uuid.uuid4()}", slug=f"tenant-{uuid.uuid4()}")
+    db_session.add(tenant)
+    db_session.flush()
+    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=tenant.id)
     db_session.add(admin)
     db_session.flush()
     document = KnowledgeDocument(
         original_filename="godziny.txt",
         uploaded_by_admin_id=admin.id,
+        tenant_id=tenant.id,
         status=DocumentStatus.ready,
     )
     db_session.add(document)

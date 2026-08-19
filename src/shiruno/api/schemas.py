@@ -71,3 +71,25 @@ class DocumentSummary(BaseModel):
     filename: str
     status: Literal["processing", "ready", "failed"]
     uploaded_at: datetime
+
+
+class AdministratorOut(BaseModel):
+    """Safe administrator identity fields only — never a password hash or
+    token internal (feature 009-admin-platform-foundation, FR-020)."""
+
+    id: uuid.UUID
+    username: str
+
+
+class TenantOut(BaseModel):
+    """Safe tenant identity fields only, and always the caller's own
+    tenant — never another tenant's (FR-019)."""
+
+    id: uuid.UUID
+    name: str
+    slug: str
+
+
+class AdminMeResponse(BaseModel):
+    administrator: AdministratorOut
+    tenant: TenantOut

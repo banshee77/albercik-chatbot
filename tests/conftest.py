@@ -24,6 +24,7 @@ import os
 
 os.environ.setdefault("AUTH_JWT_SECRET", "test-only-jwt-secret-do-not-use-in-production")
 
+import uuid
 from collections.abc import Generator
 
 import pytest
@@ -33,7 +34,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from shiruno.main import create_app
-from shiruno.persistence.models import Base
+from shiruno.persistence.models import Base, Tenant
 from tests.fakes.fake_embedding_provider import FakeEmbeddingProvider
 from tests.fakes.fake_llm_provider import FakeLLMProvider
 
@@ -109,3 +110,15 @@ def db_session(db_engine) -> Generator[Session]:  # type: ignore[valid-type]
         session.close()
         transaction.rollback()
         connection.close()
+
+
+@pytest.fixture
+def default_tenant(db_session: Session) -> Tenant:
+    """A single flushed (never committed — rolled back with `db_session`)
+    `Tenant` row, for tests that need *some* tenant to associate an
+    `Administrator`/`KnowledgeDocument` with but aren't themselves testing
+    tenant behavior (feature 009-admin-platform-foundation)."""
+    tenant = Tenant(name="Test Tenant", slug=f"test-tenant-{uuid.uuid4()}")
+    db_session.add(tenant)
+    db_session.flush()
+    return tenant

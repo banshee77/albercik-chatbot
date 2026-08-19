@@ -25,6 +25,7 @@ from shiruno.persistence.models import (
     DocumentChunk,
     DocumentStatus,
     KnowledgeDocument,
+    Tenant,
 )
 from shiruno.providers.llm.protocol import LLMProviderError
 from tests.fixtures.prompt_injection import VISITOR_INJECTION_MESSAGES
@@ -45,12 +46,16 @@ _BACKENDS = ["ollama", "anthropic"]
 
 
 def _seed_document_with_chunk(db_session, *, content: str, embedding: list[float]):
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    tenant = Tenant(name=f"Tenant {uuid.uuid4()}", slug=f"tenant-{uuid.uuid4()}")
+    db_session.add(tenant)
+    db_session.flush()
+    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=tenant.id)
     db_session.add(admin)
     db_session.flush()
     document = KnowledgeDocument(
         original_filename="godziny.txt",
         uploaded_by_admin_id=admin.id,
+        tenant_id=tenant.id,
         status=DocumentStatus.ready,
     )
     db_session.add(document)
@@ -226,7 +231,12 @@ async def test_question_and_request_size_limit_parity(
 @pytest.mark.parametrize("llm_provider_env", _BACKENDS)
 @pytest.mark.asyncio
 async def test_context_size_limit_parity(
-    llm_provider_env, db_session, fake_llm_provider, fake_embedding_provider, monkeypatch
+    llm_provider_env,
+    db_session,
+    default_tenant,
+    fake_llm_provider,
+    fake_embedding_provider,
+    monkeypatch,
 ) -> None:
     _configure_backend(monkeypatch, llm_provider_env)
     monkeypatch.setenv("MAX_CONTEXT_CHARS", "80")
@@ -238,12 +248,15 @@ async def test_context_size_limit_parity(
     # so it must be dropped (domain/retrieval.py's limit_context_chars),
     # identically regardless of active backend, with no crash and no leaked
     # internal detail.
-    admin = Administrator(username=f"seed-{uuid.uuid4()}", password_hash="x")
+    admin = Administrator(
+        username=f"seed-{uuid.uuid4()}", password_hash="x", tenant_id=default_tenant.id
+    )
     db_session.add(admin)
     db_session.flush()
     document = KnowledgeDocument(
         original_filename="godziny.txt",
         uploaded_by_admin_id=admin.id,
+        tenant_id=default_tenant.id,
         status=DocumentStatus.ready,
     )
     db_session.add(document)

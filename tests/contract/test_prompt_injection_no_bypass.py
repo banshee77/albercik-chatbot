@@ -121,9 +121,9 @@ async def test_forged_authorization_header_does_not_bypass_admin_auth(db_async_c
 
 @pytest.mark.asyncio
 async def test_admin_chat_request_with_injection_content_faces_identical_controls(
-    db_async_client, db_session, fake_llm_provider, monkeypatch
+    db_async_client, db_session, default_tenant, fake_llm_provider, monkeypatch
 ) -> None:
-    token = seed_admin_and_token(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
     monkeypatch.setenv("LLM_ENABLED", "false")
     get_settings.cache_clear()
 

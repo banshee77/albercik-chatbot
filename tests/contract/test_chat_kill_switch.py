@@ -37,10 +37,12 @@ async def test_kill_switch_off_returns_unavailable_without_any_provider_call(
 
 @pytest.mark.asyncio
 async def test_kill_switch_off_applies_identically_to_an_authenticated_administrator(
-    db_async_client, db_session, fake_llm_provider, monkeypatch
+    db_async_client, db_session, default_tenant, fake_llm_provider, monkeypatch
 ) -> None:
     settings = get_settings()
-    admin = Administrator(username="ks-admin", password_hash=hash_password("irrelevant"))
+    admin = Administrator(
+        username="ks-admin", password_hash=hash_password("irrelevant"), tenant_id=default_tenant.id
+    )
     db_session.add(admin)
     db_session.flush()
     token = issue_access_token(

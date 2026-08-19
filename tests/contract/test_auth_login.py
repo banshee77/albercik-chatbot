@@ -7,14 +7,20 @@ generic — never revealing which case applied.
 import pytest
 
 from shiruno.infra.security import hash_password
-from shiruno.persistence.models import Administrator
+from shiruno.persistence.models import Administrator, Tenant
 
 
 def _seed_admin(
     db_session, *, username: str, password: str, is_active: bool = True
 ) -> Administrator:
+    tenant = Tenant(name=f"Tenant {username}", slug=f"tenant-{username}")
+    db_session.add(tenant)
+    db_session.flush()
     admin = Administrator(
-        username=username, password_hash=hash_password(password), is_active=is_active
+        username=username,
+        password_hash=hash_password(password),
+        is_active=is_active,
+        tenant_id=tenant.id,
     )
     db_session.add(admin)
     db_session.flush()
