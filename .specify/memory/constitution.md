@@ -1,76 +1,48 @@
 <!--
 Sync Impact Report
-Version change: 3.0.0 → 3.1.0
-Rationale: MINOR bump — this amendment adds substantial new mandatory
-  guidance (an Engineering Quality Principles principle, a Separation of
-  Concerns architecture section, a Decision Priority section, and elevating
-  cost/abuse protection to its own NON-NEGOTIABLE principle) and materially
-  expands Testing Discipline and Simplicity for MVP. Nothing NON-NEGOTIABLE
-  is weakened or removed — Tenancy Posture (Principle II) is refined with
-  more detail (diagram, explicit "later as a separate architectural change"
-  framing) but its substance from v3.0.0 (single-tenant MVP, no speculative
-  multi-tenancy) is unchanged. Per the versioning policy, additive/expansive
-  changes that don't remove or weaken a principle are MINOR, not MAJOR.
+Version change: 3.1.0 → 3.1.1
+Rationale: PATCH — naming and product-boundary amendment only, reflecting
+  the completed rebrand from "Albercik Chatbot" to "Shiruno." Shiruno is
+  now named as the reusable product/platform; Albertos is clarified as
+  Shiruno's first customer and reference implementation, not the platform
+  name. No principle was added, removed, redefined, or weakened; no
+  NON-NEGOTIABLE rule changed in substance. Per the versioning policy,
+  wording clarifications with no semantic change to a principle are PATCH.
 Modified principles:
-  - II. Tenancy Posture (Single-Tenant MVP) — unchanged in substance; added
-    the single-knowledge-base data-flow diagram, an explicit "multi-tenancy
-    may be introduced later as a separate architectural change" framing, and
-    replaced the vaguer "avoid unnecessary coupling" line with a concrete
-    tie to the new Separation of Concerns section (clean layer boundaries
-    are what actually keeps a future multi-tenancy migration from requiring
-    a RAG-pipeline rewrite).
-  - V. LLM Provider Neutrality — now names Python `Protocol` (or an
-    equivalent small interface) as the expected mechanism, and adds "do not
-    build a complex provider framework for the MVP."
-  - VI. Embedding Provider Neutrality — same `Protocol` clarification, plus
-    "do not introduce provider abstractions beyond what is necessary for
-    replaceability and testing."
-  - VII. Cloud & Infrastructure Neutrality — renamed "Provider and Cloud
-    Neutrality" to match the new terminology used elsewhere; substance
-    unchanged, now explicitly lists Bedrock / another hosted provider /
-    self-hosted model as the anticipated future alternatives.
-  - X (was part of VIII/deferred). Testing Discipline — materially expanded
-    with a prioritized list of mandatory test areas (cost/budget/kill-switch
-    behavior, bounded retries, prompt injection, etc.) and a preference for
-    testing behavior/invariants over implementation details. Renumbered from
-    former Principle X to XI to make room for the new Cost Safety principle.
-  - Simplicity for MVP — materially expanded "do not introduce unless
-    justified" list (factories, repositories, ABCs, dependency layers,
-    generic frameworks, plugin systems, event buses, domain abstractions,
-    event-driven architecture, complex DDD layers, multiple deployment
-    platforms at once). Renumbered from former Principle XI to XIII.
-  - Approved MVP Technology Stack — unchanged in substance. Renumbered from
-    former Principle XII to XIV.
-Added principles/sections:
-  - X. Cost Safety Is a Security Requirement (NEW, NON-NEGOTIABLE) — elevates
-    what was previously scattered across API Security and MVP Scope
-    Boundaries into its own principle, matching the project's explicit
-    stance that public-endpoint cost exposure is a security invariant, not
-    an operational nice-to-have.
-  - XII. Engineering Quality Principles (NEW) — SOLID/KISS/YAGNI/DRY as
-    guidelines (not goals in themselves), explicit dependencies, type hints,
-    mockable I/O, boundary validation, composition over inheritance, no
-    hidden global mutable state, centralized+tested security-sensitive
-    behavior.
-  - "## Separation of Concerns" (NEW top-level section) — the layered
-    architecture diagram and per-layer responsibility list (API layer,
-    Application/service layer, RAG/domain logic, Persistence layer, LLM
-    provider boundary, Embedding provider boundary).
-  - "## Decision Priority" (NEW top-level section) — the 8-level conflict
-    resolution order (security > cost control > correctness > simplicity >
-    testability/maintainability > provider replaceability > performance >
-    architectural elegance).
+  - Title and preamble — "Albercik Chatbot Constitution" → "Shiruno
+    Constitution"; preamble now states the Shiruno product identity
+    ("Knowledge that answers." / "turns an organization's knowledge into
+    an assistant its customers can simply ask.") and names Albertos as
+    Shiruno's first customer/reference implementation rather than folding
+    the product and customer names together. No governance or principle
+    substance changed.
+  - II. Tenancy Posture (Single-Tenant MVP) — renamed the product
+    throughout ("Albercik Chatbot" → "Shiruno", including the data-flow
+    diagram's terminal node) and reworded "is intentionally single-tenant
+    for the MVP and serves exclusively Albertos" → "is intentionally
+    single-tenant per deployment for the MVP. Its first deployment serves
+    exclusively Albertos, Shiruno's reference customer" to make the
+    product/customer boundary explicit. The tenancy posture itself
+    (single-tenant MVP, no speculative multi-tenancy, multi-tenancy only
+    via a future amendment) is unchanged.
+  - Decision Priority (closing sentence) — "current Albertos chatbot
+    requirements" → "current Albertos deployment's requirements"; wording
+    only, no change to the priority ordering or its meaning.
+Added principles/sections: none.
 Removed sections: none.
 Deferred TODOs: none.
 -->
 
-# Albercik Chatbot Constitution
+# Shiruno Constitution
 
-Albercik Chatbot is a security-first, single-tenant, cloud-neutral
-Retrieval-Augmented Generation (RAG) customer support chatbot built
-exclusively for Albertos. This constitution defines the non-negotiable
-engineering rules for the project. It governs every feature spec,
-implementation plan, and task list produced by the Spec Kit workflow.
+**Shiruno — Knowledge that answers.** Shiruno turns an organization's
+knowledge into an assistant its customers can simply ask. Shiruno is the
+reusable security-first, cloud-neutral Retrieval-Augmented Generation (RAG)
+product/platform; Albertos is Shiruno's first customer and reference
+implementation, not the name of the platform itself. This constitution
+defines the non-negotiable engineering rules for Shiruno. It governs every
+feature spec, implementation plan, and task list produced by the Spec Kit
+workflow.
 
 ## Core Principles
 
@@ -92,8 +64,9 @@ make that boundary enforceable and auditable, independent of which cloud
 eventually hosts it.
 
 ### II. Tenancy Posture (Single-Tenant MVP)
-Albercik Chatbot is intentionally single-tenant for the MVP and serves
-exclusively Albertos, with one Albertos knowledge base:
+Shiruno is intentionally single-tenant per deployment for the MVP. Its
+first deployment serves exclusively Albertos, Shiruno's reference customer,
+with one Albertos knowledge base:
 
 ```text
 Albertos
@@ -104,7 +77,7 @@ documents / chunks / embeddings
    ↓
 RAG
    ↓
-Albercik Chatbot
+Shiruno
 ```
 
 The MVP MUST NOT implement `organization_id` columns, tenant tables, tenant
@@ -120,8 +93,9 @@ requiring its own constitution amendment, not something this MVP should
 pre-build. In the meantime, architectural boundaries MUST stay clean enough
 (see Separation of Concerns) that adding multi-tenancy later would not
 require rewriting the entire RAG pipeline.
-**Rationale**: The MVP specification is unambiguous that Albercik serves one
-customer, Albertos, by product design — not as a temporary shortcut.
+**Rationale**: The MVP specification is unambiguous that Shiruno's first
+deployment serves one customer, Albertos, by product design — not as a
+temporary shortcut.
 Mandating multi-tenant infrastructure the product doesn't need would violate
 the Simplicity principle and add real security-review surface (RLS
 policies, tenant-scoping tests) for an abstraction with no current consumer.
@@ -459,7 +433,7 @@ When engineering principles conflict, resolve using this priority order:
 8. Architectural elegance.
 
 Security or simplicity MUST NOT be sacrificed merely to apply a design
-pattern. The MVP MUST solve the current Albertos chatbot requirements
+pattern. The MVP MUST solve the current Albertos deployment's requirements
 cleanly before optimizing for hypothetical future requirements.
 
 ## Development Workflow & Quality Gates
@@ -511,4 +485,4 @@ exception MUST be documented in the relevant plan's Complexity Tracking
 section with a concrete justification, not merely noted and left
 unresolved.
 
-**Version**: 3.1.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-17
+**Version**: 3.1.1 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-19
