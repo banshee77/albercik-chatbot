@@ -3,8 +3,14 @@
 §2-3,7; tasks.md T054-T068):
 
     rate limit -> LLM kill switch -> budget check -> concurrency guard ->
-    scope evaluation -> embedding/retrieval -> context size limit ->
-    LLM call -> usage accounting
+    small-talk classification -> scope evaluation -> embedding/retrieval ->
+    context size limit -> LLM call -> usage accounting
+
+(feature 007-conversational-chat-ux, research.md §4: small-talk
+classification runs after every existing safeguard above, unchanged, and
+before scope evaluation — a matched message short-circuits with the
+additive `small_talk` outcome and never reaches embedding/retrieval/the
+LLM at all.)
 
 ("HTTP/payload validation" and "question length validation" happen
 earlier, before this function is ever called — request-body-size in
@@ -42,6 +48,7 @@ from albercik_chatbot.api.errors import RateLimitedError
 from albercik_chatbot.domain.prompting import SourceReference, assemble_prompt, extract_sources
 from albercik_chatbot.domain.retrieval import limit_context_chars, select_sufficient_chunks
 from albercik_chatbot.domain.scope import is_albertos_scope
+from albercik_chatbot.domain.small_talk import classify_small_talk, small_talk_reply
 from albercik_chatbot.infra.budget import check_llm_budget
 from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
 from albercik_chatbot.infra.rate_limit import check_and_increment
@@ -50,7 +57,9 @@ from albercik_chatbot.persistence.repositories import search_similar_chunks
 from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
 from albercik_chatbot.providers.llm.protocol import LLMProvider, LLMProviderError
 
-Outcome = Literal["grounded", "insufficient_information", "out_of_scope", "unavailable"]
+Outcome = Literal[
+    "grounded", "insufficient_information", "out_of_scope", "unavailable", "small_talk"
+]
 
 _OUT_OF_SCOPE_MESSAGE = (
     "Odpowiadam wyłącznie na pytania związane z Albertos. Nie mogę pomóc z tym pytaniem."
@@ -153,6 +162,14 @@ def ask_question(
     with concurrency_guard.try_acquire() as acquired:
         if not acquired:
             return AskQuestionResult(outcome="unavailable", answer=_UNAVAILABLE_MESSAGE)
+
+        # --- small-talk short-circuit (feature 007; must run after every
+        # safeguard above, unchanged, and before scope/retrieval/LLM) ---
+        small_talk_category = classify_small_talk(question)
+        if small_talk_category is not None:
+            return AskQuestionResult(
+                outcome="small_talk", answer=small_talk_reply(small_talk_category)
+            )
 
         # --- scope evaluation ---
         if not is_albertos_scope(question):

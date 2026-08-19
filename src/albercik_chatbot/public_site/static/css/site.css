@@ -412,8 +412,41 @@ section + section {
   display: inline-flex;
 }
 
-.chat-launcher__icon {
-  display: inline-flex;
+/* Decorative "Asystent Albertos" avatar (feature 007-conversational-
+   chat-ux) — an abstract Japanese-inspired mark (an "enso," an incomplete
+   Zen circle), deliberately not a robot or a human face. Referenced only
+   via `background-image`, never an `<img>` tag: if the SVG fails to load
+   or is blocked, this rule's own `background-color` still renders a
+   plain, neutral circle — never a broken-image glyph, and never a reason
+   the launcher/message layout depends on the asset loading. */
+.chat-avatar {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background-color: var(--paper);
+  background-image: url("/static/site/img/assistant-avatar.svg");
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--line);
+}
+
+.chat-launcher .chat-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.chat-message-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+.chat-message-row .chat-message {
+  max-width: none;
 }
 
 .chat-panel {
@@ -499,13 +532,6 @@ section + section {
   align-self: flex-start;
   background: var(--paper);
   border: 1px solid var(--line);
-}
-
-.chat-message__sources {
-  display: block;
-  margin-top: var(--space-1);
-  color: var(--muted);
-  font-size: 0.8rem;
 }
 
 .chat-status {

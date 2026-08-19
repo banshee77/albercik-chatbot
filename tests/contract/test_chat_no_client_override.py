@@ -88,6 +88,13 @@ async def test_client_supplied_override_fields_are_rejected(db_async_client) -> 
         {"OLLAMA_SEED": 999},
         {"ollama_temperature": 1.5},
         {"ollama_seed": 999},
+        # Feature 007-conversational-chat-ux (FR-018): the small-talk
+        # classification outcome is derived solely from `question` — a
+        # client must not be able to select, name, or override it via any
+        # request field either.
+        {"intent": "small_talk"},
+        {"outcome": "small_talk"},
+        {"is_small_talk": True},
     ],
 )
 async def test_individual_provider_selection_override_attempts_are_each_rejected(

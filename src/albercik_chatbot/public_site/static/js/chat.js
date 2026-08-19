@@ -7,8 +7,11 @@
 // display:none (site.css's `.js`-scoped rules) and the panel stays
 // [hidden] — there is nothing dead-but-visible left behind if this file
 // fails to load. Every message is inserted with `.textContent`, never
-// `.innerHTML` — the assistant's answer text and source labels are always
-// treated as untrusted content (FR-021/FR-022).
+// `.innerHTML` — the assistant's answer text is always treated as
+// untrusted content (FR-021/FR-022). Retrieval source metadata (present
+// in the backend's response for future admin/observability tooling) is
+// never rendered by this public widget for any outcome (feature
+// 007-conversational-chat-ux, User Story 5).
 
 (function () {
   "use strict";
@@ -64,7 +67,7 @@
 
   // --- Rendering (textContent only — never innerHTML, FR-021/FR-022) ---
 
-  function renderMessage(role, text, sources) {
+  function renderMessage(role, text) {
     var wrapper = document.createElement("div");
     wrapper.className = "chat-message chat-message--" + role;
 
@@ -72,26 +75,38 @@
     textEl.textContent = text;
     wrapper.appendChild(textEl);
 
-    if (sources && sources.length > 0) {
-      var sourcesEl = document.createElement("span");
-      sourcesEl.className = "chat-message__sources";
-      sourcesEl.textContent = "Źródła: " + sources.join(", ");
-      wrapper.appendChild(sourcesEl);
+    // Decorative "Asystent Albertos" avatar, assistant messages only
+    // (feature 007-conversational-chat-ux, User Story 4). A CSS
+    // background-image on a plain <span> — never an <img> — so a failed
+    // asset load degrades to the CSS rule's own background-color, never a
+    // broken-image glyph; aria-hidden keeps it out of the accessibility
+    // tree, since the message text alone already conveys who is speaking.
+    var appended = wrapper;
+    if (role === "assistant") {
+      var avatarEl = document.createElement("span");
+      avatarEl.className = "chat-avatar";
+      avatarEl.setAttribute("aria-hidden", "true");
+
+      var row = document.createElement("div");
+      row.className = "chat-message-row";
+      row.appendChild(avatarEl);
+      row.appendChild(wrapper);
+      appended = row;
     }
 
-    messagesEl.appendChild(wrapper);
+    messagesEl.appendChild(appended);
     messagesEl.scrollTop = messagesEl.scrollHeight;
     return wrapper;
   }
 
-  function appendAndPersist(role, text, sources) {
-    renderMessage(role, text, sources || []);
-    history.push({ role: role, text: text, sources: sources || [] });
+  function appendAndPersist(role, text) {
+    renderMessage(role, text);
+    history.push({ role: role, text: text });
     saveHistory(history);
   }
 
   history.forEach(function (entry) {
-    renderMessage(entry.role, entry.text, entry.sources);
+    renderMessage(entry.role, entry.text);
   });
 
   // --- Open / close, with WAI-ARIA "Dialog (Modal)" focus management
@@ -176,19 +191,6 @@
     input.disabled = busy;
   }
 
-  function dedupeSourceLabels(sources) {
-    var seen = {};
-    var labels = [];
-    (sources || []).forEach(function (source) {
-      var label = source && source.label;
-      if (typeof label === "string" && !seen[label]) {
-        seen[label] = true;
-        labels.push(label);
-      }
-    });
-    return labels;
-  }
-
   function isChatResponseShape(body) {
     return (
       !!body && typeof body.outcome === "string" && typeof body.answer === "string"
@@ -205,7 +207,7 @@
   var RATE_LIMIT_MESSAGE = "Zbyt wiele pytań w krótkim czasie. Spróbuj ponownie za chwilę.";
 
   function showFallbackMessage() {
-    appendAndPersist("assistant", GENERIC_FALLBACK_MESSAGE, []);
+    appendAndPersist("assistant", GENERIC_FALLBACK_MESSAGE);
   }
 
   function parseRetryAfterSeconds(response) {
@@ -222,26 +224,30 @@
           retryAfterSeconds +
           " s."
         : RATE_LIMIT_MESSAGE;
-    appendAndPersist("assistant", message, []);
+    appendAndPersist("assistant", message);
   }
 
   function handleResponse(response, body) {
     if (response.status === 200 && isChatResponseShape(body)) {
       if (body.outcome === "grounded") {
-        appendAndPersist("assistant", body.answer, dedupeSourceLabels(body.sources));
+        appendAndPersist("assistant", body.answer);
         return;
       }
       if (body.outcome === "insufficient_information" || body.outcome === "out_of_scope") {
-        // Neither outcome ever renders a sources line — the backend's
-        // `sources` array is already empty for these, but the client does
-        // not rely on that implicitly (FR-010/FR-011).
-        appendAndPersist("assistant", body.answer, []);
+        appendAndPersist("assistant", body.answer);
+        return;
+      }
+      if (body.outcome === "small_talk") {
+        // Deterministic small-talk reply, answered server-side without a
+        // retrieval/LLM call (feature 007). Explicit branch required —
+        // otherwise this outcome would fall to the generic fallback below.
+        appendAndPersist("assistant", body.answer);
         return;
       }
       if (body.outcome === "unavailable") {
         // Not produced by the current backend (which always pairs
         // "unavailable" with a 503), handled defensively all the same.
-        appendAndPersist("assistant", body.answer, []);
+        appendAndPersist("assistant", body.answer);
         return;
       }
       showFallbackMessage();
@@ -257,7 +263,7 @@
       // The backend's own 503 body already carries a safe, friendly,
       // Polish "unavailable" answer — reused directly rather than
       // duplicating a second client-authored string (research.md §1).
-      appendAndPersist("assistant", body.answer, []);
+      appendAndPersist("assistant", body.answer);
       return;
     }
 
@@ -275,10 +281,10 @@
       return;
     }
 
-    appendAndPersist("user", question, []);
+    appendAndPersist("user", question);
     input.value = "";
     setBusy(true);
-    statusEl.textContent = "Albertos AI pisze odpowiedź…";
+    statusEl.textContent = "Asystent Albertos pisze odpowiedź…";
 
     fetch(CHAT_ENDPOINT, {
       method: "POST",

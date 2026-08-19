@@ -95,6 +95,24 @@ def _branch_window(source: str, literal: str, window: int = 300) -> str:
     return source[match.end() : match.end() + window]
 
 
+def _function_body(source: str, name: str) -> str:
+    """Extracts the source of `function name(...) { ... }` by brace
+    matching, not a fixed-size window — used where a construct (e.g. an
+    element built across several statements) can't be reliably captured by
+    a short slice."""
+    match = re.search(r"function\s+" + re.escape(name) + r"\s*\([^)]*\)\s*\{", source)
+    assert match is not None, f"no `function {name}(...)` declaration found"
+    depth = 1
+    index = match.end()
+    while depth > 0:
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+        index += 1
+    return source[match.end() : index - 1]
+
+
 def test_insufficient_information_and_out_of_scope_have_explicit_branches() -> None:
     """User Story 2 (FR-010/FR-011): both outcomes must be named
     explicitly in the outcome-handling code, not merely handled by an
@@ -103,6 +121,19 @@ def test_insufficient_information_and_out_of_scope_have_explicit_branches() -> N
 
     _branch_window(source, "insufficient_information")
     _branch_window(source, "out_of_scope")
+
+
+def test_small_talk_outcome_has_an_explicit_branch_and_renders_the_answer() -> None:
+    """Feature 007-conversational-chat-ux (research.md §7a): `handleResponse()`
+    is a closed switch, not a defensive default — without an explicit
+    `small_talk` branch, every small-talk reply from the backend would
+    incorrectly fall into the generic error fallback instead of rendering
+    `answer` as a normal assistant message."""
+    source = _read_chat_js()
+
+    window = _branch_window(source, "small_talk")
+    assert "appendAndPersist" in window
+    assert "Źródła" not in window
 
 
 def test_insufficient_information_and_out_of_scope_never_render_sources() -> None:
@@ -175,3 +206,70 @@ def test_tab_key_focus_trap_present() -> None:
 
     assert re.search(r"""key\s*[!=]==\s*["']Tab["']""", source) is not None
     assert "shiftKey" in source
+
+
+def test_never_creates_an_img_element() -> None:
+    """Feature 007-conversational-chat-ux User Story 4 (research.md §6):
+    the avatar is a CSS `background-image` on a decorative `<span>`, never
+    a bare `<img>` — an `<img>` would need its own `onerror` handling to
+    avoid a broken-image glyph on failure, which this design deliberately
+    avoids. Checks for the actual DOM-construction call, not a comment
+    mentioning "img"."""
+    source = _read_chat_js()
+
+    assert re.search(r"""createElement\(\s*["']img["']\s*\)""", source) is None
+
+
+def test_render_message_constructs_a_decorative_avatar_for_assistant_messages() -> None:
+    """Feature 007-conversational-chat-ux User Story 4 (FR-010/FR-011):
+    `renderMessage()` must actually construct an element carrying the
+    `chat-avatar` class and set `aria-hidden` on it — checked as real
+    DOM-construction code (an assignment/call, not merely the substring
+    "chat-avatar" appearing anywhere, e.g. in a comment)."""
+    source = _read_chat_js()
+    body = _function_body(source, "renderMessage")
+
+    has_class_assignment = re.search(
+        r"""className\s*=\s*["']chat-avatar["']|classList\.add\(\s*["']chat-avatar["']\s*\)""",
+        body,
+    )
+    assert has_class_assignment is not None, "no chat-avatar class assignment in renderMessage()"
+
+    has_aria_hidden = re.search(
+        r"""setAttribute\(\s*["']aria-hidden["']\s*,\s*["']true["']\s*\)|ariaHidden\s*=\s*["']true["']""",
+        body,
+    )
+    assert has_aria_hidden is not None, "no aria-hidden set on the avatar element in renderMessage"
+
+    # Only the assistant role gets an avatar — the class assignment must
+    # be gated behind a role check, not applied unconditionally to every
+    # message (user messages must not carry the assistant's avatar).
+    avatar_assignment_index = has_class_assignment.start()
+    preceding = body[:avatar_assignment_index]
+    assert '"assistant"' in preceding or "'assistant'" in preceding
+
+
+def test_no_source_label_rendering_reachable_anywhere_in_chat_js() -> None:
+    """User Story 5 (FR-013/FR-014, SC-004): the public widget must never
+    render a source-label line for any outcome — checked across the whole
+    file, not just one outcome branch, since none of them may render it.
+    This is a pure subtraction in the presentation layer; the backend's
+    `sources` field itself is untouched (verified separately at the
+    contract level, tests/contract/test_chat.py, per T031)."""
+    source = _read_chat_js()
+
+    assert "Źródła" not in source
+    assert "dedupeSourceLabels" not in source
+
+
+def test_render_message_no_longer_accepts_a_sources_parameter() -> None:
+    """User Story 5: `renderMessage()`'s own signature must drop the
+    `sources` parameter entirely, not merely stop using it — checked
+    against the actual function declaration, not a substring anywhere in
+    the file."""
+    source = _read_chat_js()
+
+    match = re.search(r"function\s+renderMessage\s*\(([^)]*)\)", source)
+    assert match is not None, "no `function renderMessage(...)` declaration found"
+    params = [p.strip() for p in match.group(1).split(",") if p.strip()]
+    assert params == ["role", "text"]

@@ -41,7 +41,9 @@ class SourceReferenceOut(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    outcome: Literal["grounded", "insufficient_information", "out_of_scope", "unavailable"]
+    outcome: Literal[
+        "grounded", "insufficient_information", "out_of_scope", "unavailable", "small_talk"
+    ]
     answer: str
     sources: list[SourceReferenceOut] = Field(default_factory=list)
     # Correlation id for this request, also stored on the corresponding
