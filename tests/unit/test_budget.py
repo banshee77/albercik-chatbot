@@ -22,8 +22,8 @@ remains the only check that still applies to every backend alike.
 import uuid
 from datetime import UTC, datetime
 
-from albercik_chatbot.infra.budget import check_llm_budget
-from albercik_chatbot.persistence.models import ProviderKind, ProviderName, UsageRecord
+from shiruno.infra.budget import check_llm_budget
+from shiruno.persistence.models import ProviderKind, ProviderName, UsageRecord
 
 
 class _RaisingSession:

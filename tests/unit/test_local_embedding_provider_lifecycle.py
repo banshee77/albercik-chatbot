@@ -19,7 +19,7 @@ import os
 
 import numpy as np
 
-from albercik_chatbot.providers.embedding import local_sentence_transformer_provider as mod
+from shiruno.providers.embedding import local_sentence_transformer_provider as mod
 
 
 class _FakeSentenceTransformer:

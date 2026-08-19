@@ -1,6 +1,6 @@
 """Unit tests for the process-local bounded concurrency guard (T066)."""
 
-from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
+from shiruno.infra.concurrency import ChatConcurrencyGuard
 
 
 def test_acquires_when_under_the_limit() -> None:

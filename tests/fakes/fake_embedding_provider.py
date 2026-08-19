@@ -22,7 +22,7 @@ import math
 import random
 from collections.abc import Sequence
 
-from albercik_chatbot.providers.embedding.protocol import EMBEDDING_DIMENSIONS
+from shiruno.providers.embedding.protocol import EMBEDDING_DIMENSIONS
 
 
 def _deterministic_vector(text: str) -> list[float]:

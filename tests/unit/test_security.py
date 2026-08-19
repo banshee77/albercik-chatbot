@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 import jwt
 
-from albercik_chatbot.infra.security import issue_access_token, verify_access_token
+from shiruno.infra.security import issue_access_token, verify_access_token
 
 _SECRET = "test-secret-not-a-real-one-but-long-enough-for-hs256"
 _ALGORITHM = "HS256"

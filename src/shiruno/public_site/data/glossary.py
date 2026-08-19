@@ -1,7 +1,7 @@
 """Static dojo-terminology glossary for the Traditional Karate-Do page
 (feature 005-public-club-website)."""
 
-from albercik_chatbot.public_site.models import GlossaryTerm
+from shiruno.public_site.models import GlossaryTerm
 
 GLOSSARY_TERMS: tuple[GlossaryTerm, ...] = (
     GlossaryTerm(

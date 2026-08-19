@@ -4,7 +4,7 @@
 
 import pytest
 
-from albercik_chatbot.domain.chunking import chunk_text
+from shiruno.domain.chunking import chunk_text
 
 
 def test_same_input_always_produces_same_chunks() -> None:

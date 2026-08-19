@@ -5,7 +5,7 @@ providers — operates on plain `RetrievedChunk` values.
 
 import uuid
 
-from albercik_chatbot.domain.retrieval import (
+from shiruno.domain.retrieval import (
     RetrievedChunk,
     has_sufficient_context,
     limit_context_chars,

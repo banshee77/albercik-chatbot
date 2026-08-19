@@ -4,8 +4,8 @@
 
 from datetime import date
 
-from albercik_chatbot.public_site.filters import filter_news, filter_sessions
-from albercik_chatbot.public_site.models import NewsPost, TrainingSession
+from shiruno.public_site.filters import filter_news, filter_sessions
+from shiruno.public_site.models import NewsPost, TrainingSession
 
 _SESSIONS = (
     TrainingSession(location_slug="a", day="Poniedziałek", time_range="17:00", age_level="Beg"),

@@ -13,9 +13,9 @@ import uuid
 import pytest
 from sqlalchemy import func, select
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.infra.security import issue_access_token
-from albercik_chatbot.persistence.models import Administrator, KnowledgeDocument
+from shiruno.config import get_settings
+from shiruno.infra.security import issue_access_token
+from shiruno.persistence.models import Administrator, KnowledgeDocument
 
 
 @pytest.mark.asyncio

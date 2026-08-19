@@ -5,7 +5,7 @@
 
 import pytest
 
-from albercik_chatbot.config import get_settings
+from shiruno.config import get_settings
 
 
 @pytest.mark.asyncio

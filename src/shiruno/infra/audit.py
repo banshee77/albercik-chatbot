@@ -1,7 +1,7 @@
 """Privacy-conscious audit logging for security-relevant administrator
 actions (FR-053, Principle IX; tasks.md T074).
 
-A dedicated logger (`albercik_chatbot.audit`), not a new persistence table
+A dedicated logger (`shiruno.audit`), not a new persistence table
 or external logging service — `infra/logging.py`'s existing structured
 handler (stderr, one line per record) is the delivery mechanism; this
 module only defines *what* gets logged. `log_audit_event`'s parameter list
@@ -18,9 +18,9 @@ messages.
 import uuid
 from typing import Literal
 
-from albercik_chatbot.infra.logging import get_logger
+from shiruno.infra.logging import get_logger
 
-_audit_logger = get_logger("albercik_chatbot.audit")
+_audit_logger = get_logger("shiruno.audit")
 
 AuditAction = Literal["login_success", "login_failure", "document_upload", "document_delete"]
 AuditOutcome = Literal["success", "failure", "not_found"]

@@ -22,7 +22,7 @@ from pathlib import Path
 _CHAT_JS_PATH = (
     Path(__file__).resolve().parents[2]
     / "src"
-    / "albercik_chatbot"
+    / "shiruno"
     / "public_site"
     / "static"
     / "js"

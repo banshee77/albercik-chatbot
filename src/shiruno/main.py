@@ -17,8 +17,8 @@ active. `application/ask_question.py` and every other layer downstream
 only ever sees the `LLMProvider` Protocol.
 
 There is deliberately no module-level `app = create_app()`: uvicorn is run
-in factory mode (`uvicorn albercik_chatbot.main:create_app --factory`, see
-Dockerfile) so importing this module — e.g. `from albercik_chatbot.main
+in factory mode (`uvicorn shiruno.main:create_app --factory`, see
+Dockerfile) so importing this module — e.g. `from shiruno.main
 import create_app` in conftest.py — never has the side effect of
 constructing real providers.
 """
@@ -28,19 +28,19 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from albercik_chatbot.api.errors import register_exception_handlers
-from albercik_chatbot.api.routers import auth, chat, documents, health
-from albercik_chatbot.config import Settings, get_settings
-from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
-from albercik_chatbot.infra.logging import configure_logging, get_logger
-from albercik_chatbot.providers.embedding.local_sentence_transformer_provider import (
+from shiruno.api.errors import register_exception_handlers
+from shiruno.api.routers import auth, chat, documents, health
+from shiruno.config import Settings, get_settings
+from shiruno.infra.concurrency import ChatConcurrencyGuard
+from shiruno.infra.logging import configure_logging, get_logger
+from shiruno.providers.embedding.local_sentence_transformer_provider import (
     LocalSentenceTransformerEmbeddingProvider,
 )
-from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
-from albercik_chatbot.providers.llm.anthropic_provider import AnthropicLLMProvider
-from albercik_chatbot.providers.llm.ollama_provider import OllamaLLMProvider
-from albercik_chatbot.providers.llm.protocol import LLMProvider
-from albercik_chatbot.public_site.router import router as public_site_router
+from shiruno.providers.embedding.protocol import EmbeddingProvider
+from shiruno.providers.llm.anthropic_provider import AnthropicLLMProvider
+from shiruno.providers.llm.ollama_provider import OllamaLLMProvider
+from shiruno.providers.llm.protocol import LLMProvider
+from shiruno.public_site.router import router as public_site_router
 
 _PUBLIC_SITE_STATIC_DIR = Path(__file__).resolve().parent / "public_site" / "static"
 
@@ -74,7 +74,7 @@ def create_app(
     configure_logging()
     settings = get_settings()
 
-    app = FastAPI(title="Albercik Chatbot API", version="0.1.0")
+    app = FastAPI(title="Shiruno API", version="0.1.0")
     register_exception_handlers(app)
 
     # The active model name, computed once here regardless of whether the

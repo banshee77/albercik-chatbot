@@ -18,13 +18,13 @@ import uuid
 
 import pytest
 
-from albercik_chatbot.persistence.models import (
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,
     KnowledgeDocument,
 )
-from albercik_chatbot.providers.llm.protocol import LLMResult
+from shiruno.providers.llm.protocol import LLMResult
 
 
 def _seed_document_with_chunk(db_session, *, filename: str, content: str, embedding: list[float]):

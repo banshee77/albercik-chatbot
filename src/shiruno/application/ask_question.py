@@ -44,18 +44,18 @@ from typing import Literal
 
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.api.errors import RateLimitedError
-from albercik_chatbot.domain.prompting import SourceReference, assemble_prompt, extract_sources
-from albercik_chatbot.domain.retrieval import limit_context_chars, select_sufficient_chunks
-from albercik_chatbot.domain.scope import is_albertos_scope
-from albercik_chatbot.domain.small_talk import classify_small_talk, small_talk_reply
-from albercik_chatbot.infra.budget import check_llm_budget
-from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
-from albercik_chatbot.infra.rate_limit import check_and_increment
-from albercik_chatbot.persistence.models import ProviderKind, ProviderName, UsageRecord
-from albercik_chatbot.persistence.repositories import search_similar_chunks
-from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
-from albercik_chatbot.providers.llm.protocol import LLMProvider, LLMProviderError
+from shiruno.api.errors import RateLimitedError
+from shiruno.domain.prompting import SourceReference, assemble_prompt, extract_sources
+from shiruno.domain.retrieval import limit_context_chars, select_sufficient_chunks
+from shiruno.domain.scope import is_albertos_scope
+from shiruno.domain.small_talk import classify_small_talk, small_talk_reply
+from shiruno.infra.budget import check_llm_budget
+from shiruno.infra.concurrency import ChatConcurrencyGuard
+from shiruno.infra.rate_limit import check_and_increment
+from shiruno.persistence.models import ProviderKind, ProviderName, UsageRecord
+from shiruno.persistence.repositories import search_similar_chunks
+from shiruno.providers.embedding.protocol import EmbeddingProvider
+from shiruno.providers.llm.protocol import LLMProvider, LLMProviderError
 
 Outcome = Literal[
     "grounded", "insufficient_information", "out_of_scope", "unavailable", "small_talk"

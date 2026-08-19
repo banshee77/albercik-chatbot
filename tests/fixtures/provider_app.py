@@ -17,10 +17,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from albercik_chatbot.main import create_app
-from albercik_chatbot.persistence.database import get_session
-from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
-from albercik_chatbot.providers.llm.protocol import LLMProvider
+from shiruno.main import create_app
+from shiruno.persistence.database import get_session
+from shiruno.providers.embedding.protocol import EmbeddingProvider
+from shiruno.providers.llm.protocol import LLMProvider
 
 
 def build_app(

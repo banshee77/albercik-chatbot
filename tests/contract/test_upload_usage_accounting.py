@@ -8,7 +8,7 @@ which only ever looks at `provider_kind == 'llm'` rows).
 import pytest
 from sqlalchemy import select
 
-from albercik_chatbot.persistence.models import ProviderKind, UsageRecord
+from shiruno.persistence.models import ProviderKind, UsageRecord
 from tests.fixtures.admin import seed_admin_and_token
 
 

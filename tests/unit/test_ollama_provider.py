@@ -14,8 +14,8 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from albercik_chatbot.providers.llm.ollama_provider import OllamaLLMProvider
-from albercik_chatbot.providers.llm.protocol import ANSWERABILITY_JSON_SCHEMA, LLMProviderError
+from shiruno.providers.llm.ollama_provider import OllamaLLMProvider
+from shiruno.providers.llm.protocol import ANSWERABILITY_JSON_SCHEMA, LLMProviderError
 
 _BASE_URL = "http://ollama:11434"
 
@@ -313,7 +313,7 @@ def test_succeeds_after_transient_failures_within_budget() -> None:
 
 
 def test_configured_timeout_and_base_url_are_passed_to_the_httpx_client() -> None:
-    with patch("albercik_chatbot.providers.llm.ollama_provider.httpx.Client") as mock_client_cls:
+    with patch("shiruno.providers.llm.ollama_provider.httpx.Client") as mock_client_cls:
         OllamaLLMProvider(
             base_url="http://ollama:11434",
             model="qwen3:4b",

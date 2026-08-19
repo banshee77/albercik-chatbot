@@ -11,13 +11,13 @@ import uuid
 
 import pytest
 
-from albercik_chatbot.persistence.models import (
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,
     KnowledgeDocument,
 )
-from albercik_chatbot.providers.llm.protocol import LLMProviderError
+from shiruno.providers.llm.protocol import LLMProviderError
 
 
 @pytest.mark.asyncio

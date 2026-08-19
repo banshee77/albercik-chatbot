@@ -1,7 +1,7 @@
 """Static trainer profiles for the public website (fictional demo
 content — feature 005-public-club-website)."""
 
-from albercik_chatbot.public_site.models import Trainer
+from shiruno.public_site.models import Trainer
 
 TRAINERS: tuple[Trainer, ...] = (
     Trainer(

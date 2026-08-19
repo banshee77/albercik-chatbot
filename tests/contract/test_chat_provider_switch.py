@@ -17,8 +17,8 @@ import uuid
 import pytest
 from sqlalchemy import select
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.persistence.models import (
+from shiruno.config import get_settings
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,
@@ -27,7 +27,7 @@ from albercik_chatbot.persistence.models import (
     ProviderName,
     UsageRecord,
 )
-from albercik_chatbot.providers.llm.protocol import LLMResult
+from shiruno.providers.llm.protocol import LLMResult
 from tests.fixtures.provider_app import build_app, client_for
 
 _QUESTION = "Jakie są godziny otwarcia biura Albertos?"

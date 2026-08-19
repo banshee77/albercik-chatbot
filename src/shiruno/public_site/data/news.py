@@ -3,7 +3,7 @@ feature 005-public-club-website)."""
 
 from datetime import date
 
-from albercik_chatbot.public_site.models import NewsPost
+from shiruno.public_site.models import NewsPost
 
 NEWS_POSTS: tuple[NewsPost, ...] = (
     NewsPost(

@@ -21,11 +21,11 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.infra.budget import check_llm_budget
-from albercik_chatbot.main import create_app
-from albercik_chatbot.persistence.database import get_session
-from albercik_chatbot.persistence.models import (
+from shiruno.config import get_settings
+from shiruno.infra.budget import check_llm_budget
+from shiruno.main import create_app
+from shiruno.persistence.database import get_session
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,
@@ -34,7 +34,7 @@ from albercik_chatbot.persistence.models import (
     ProviderName,
     UsageRecord,
 )
-from albercik_chatbot.providers.llm.protocol import LLMResult
+from shiruno.providers.llm.protocol import LLMResult
 
 _QUESTION = "Jakie są godziny otwarcia biura Albertos?"
 _ANSWER_CONTENT = "Biuro Albertos jest otwarte od poniedziałku do piątku, w godzinach 9-17."

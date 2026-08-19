@@ -1,4 +1,4 @@
-"""Runs `eval/questions.jsonl` against a live Albercik Chatbot instance and
+"""Runs `eval/questions.jsonl` against a live Shiruno (Albertos) instance and
 reports pass/fail plus the metrics `eval/README.md` recommends collecting
 (grounded accuracy, insufficient-information rejection rate, out-of-scope
 accuracy, false-grounded rate, latency percentiles, and — where the active
@@ -56,9 +56,9 @@ from pathlib import Path
 import httpx
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.persistence.database import get_session_factory
-from albercik_chatbot.persistence.models import ProviderKind, UsageRecord
+from shiruno.config import get_settings
+from shiruno.persistence.database import get_session_factory
+from shiruno.persistence.models import ProviderKind, UsageRecord
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 KNOWLEDGE_DIR = REPO_ROOT / "knowledge"
@@ -79,7 +79,7 @@ def _ensure_eval_admin() -> None:
             "run",
             "python",
             "-m",
-            "albercik_chatbot.cli",
+            "shiruno.cli",
             "create-admin",
             "--username",
             _EVAL_ADMIN_USERNAME,

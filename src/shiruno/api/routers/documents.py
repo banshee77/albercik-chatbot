@@ -12,17 +12,17 @@ import uuid
 from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.api.deps import get_current_administrator, get_embedding_provider
-from albercik_chatbot.api.errors import NotFoundAppError, PayloadTooLargeError
-from albercik_chatbot.api.schemas import DocumentSummary
-from albercik_chatbot.application.delete_document import delete_document
-from albercik_chatbot.application.list_documents import list_documents
-from albercik_chatbot.application.upload_document import upload_document
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.infra.audit import log_audit_event
-from albercik_chatbot.persistence.database import get_session
-from albercik_chatbot.persistence.models import Administrator, DocumentStatus, KnowledgeDocument
-from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
+from shiruno.api.deps import get_current_administrator, get_embedding_provider
+from shiruno.api.errors import NotFoundAppError, PayloadTooLargeError
+from shiruno.api.schemas import DocumentSummary
+from shiruno.application.delete_document import delete_document
+from shiruno.application.list_documents import list_documents
+from shiruno.application.upload_document import upload_document
+from shiruno.config import get_settings
+from shiruno.infra.audit import log_audit_event
+from shiruno.persistence.database import get_session
+from shiruno.persistence.models import Administrator, DocumentStatus, KnowledgeDocument
+from shiruno.providers.embedding.protocol import EmbeddingProvider
 
 router = APIRouter(prefix="/api/v1", tags=["documents"])
 

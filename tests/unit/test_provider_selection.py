@@ -16,10 +16,10 @@ unchanged) — only the LLM-provider-selection branch is under test.
 
 import logging
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.main import create_app
-from albercik_chatbot.providers.llm.anthropic_provider import AnthropicLLMProvider
-from albercik_chatbot.providers.llm.ollama_provider import OllamaLLMProvider
+from shiruno.config import get_settings
+from shiruno.main import create_app
+from shiruno.providers.llm.anthropic_provider import AnthropicLLMProvider
+from shiruno.providers.llm.ollama_provider import OllamaLLMProvider
 from tests.fakes.fake_embedding_provider import FakeEmbeddingProvider
 from tests.fakes.fake_llm_provider import FakeLLMProvider
 

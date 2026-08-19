@@ -21,10 +21,10 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.api.errors import PayloadTooLargeError, ValidationAppError
-from albercik_chatbot.domain.chunking import chunk_text
-from albercik_chatbot.infra.logging import get_logger
-from albercik_chatbot.persistence.models import (
+from shiruno.api.errors import PayloadTooLargeError, ValidationAppError
+from shiruno.domain.chunking import chunk_text
+from shiruno.infra.logging import get_logger
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,
@@ -33,7 +33,7 @@ from albercik_chatbot.persistence.models import (
     ProviderName,
     UsageRecord,
 )
-from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
+from shiruno.providers.embedding.protocol import EmbeddingProvider
 
 logger = get_logger(__name__)
 

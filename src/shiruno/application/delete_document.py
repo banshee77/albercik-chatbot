@@ -13,8 +13,8 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.api.errors import NotFoundAppError
-from albercik_chatbot.persistence.models import KnowledgeDocument
+from shiruno.api.errors import NotFoundAppError
+from shiruno.persistence.models import KnowledgeDocument
 
 
 def delete_document(document_id: uuid.UUID, *, session: Session) -> None:

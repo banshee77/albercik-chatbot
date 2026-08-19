@@ -6,8 +6,8 @@ generic — never revealing which case applied.
 
 import pytest
 
-from albercik_chatbot.infra.security import hash_password
-from albercik_chatbot.persistence.models import Administrator
+from shiruno.infra.security import hash_password
+from shiruno.persistence.models import Administrator
 
 
 def _seed_admin(

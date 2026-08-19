@@ -1,7 +1,7 @@
 """Static training-session (schedule) content for the public website
 (fictional demo content — feature 005-public-club-website)."""
 
-from albercik_chatbot.public_site.models import TrainingSession
+from shiruno.public_site.models import TrainingSession
 
 SESSIONS: tuple[TrainingSession, ...] = (
     TrainingSession(

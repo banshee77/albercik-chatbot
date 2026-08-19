@@ -43,7 +43,7 @@ os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 from sentence_transformers import SentenceTransformer  # noqa: E402
 
-from albercik_chatbot.providers.embedding.protocol import EMBEDDING_DIMENSIONS  # noqa: E402
+from shiruno.providers.embedding.protocol import EMBEDDING_DIMENSIONS  # noqa: E402
 
 _QUERY_PREFIX = "query: "
 _PASSAGE_PREFIX = "passage: "

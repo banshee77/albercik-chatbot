@@ -2,13 +2,14 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
+
 # Populated in Foundational (T008 config.py, T010 models.py). Imported here
 # so `alembic revision --autogenerate` and `alembic upgrade` share the same
 # Settings/metadata the application itself uses — one source of truth for
 # DATABASE_URL (FR-051) and the schema (data-model.md).
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.persistence.models import Base
-from alembic import context
+from shiruno.config import get_settings
+from shiruno.persistence.models import Base
 
 config = context.config
 

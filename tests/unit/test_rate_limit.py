@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from starlette.datastructures import Headers
 from starlette.requests import Request
 
-from albercik_chatbot.infra.rate_limit import check_and_increment, resolve_client_ip
+from shiruno.infra.rate_limit import check_and_increment, resolve_client_ip
 
 
 def _make_request(*, client_host: str | None, headers: dict[str, str] | None = None) -> Request:

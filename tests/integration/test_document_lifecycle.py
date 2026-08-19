@@ -12,7 +12,7 @@ import uuid
 
 import pytest
 
-from albercik_chatbot.persistence.repositories import search_similar_chunks
+from shiruno.persistence.repositories import search_similar_chunks
 from tests.fixtures.admin import seed_admin_and_token
 
 

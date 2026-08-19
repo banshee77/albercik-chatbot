@@ -11,8 +11,8 @@ import uuid
 import pytest
 from sqlalchemy import select
 
-from albercik_chatbot.domain.prompting import SYSTEM_PROMPT
-from albercik_chatbot.persistence.models import (
+from shiruno.domain.prompting import SYSTEM_PROMPT
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,
@@ -20,7 +20,7 @@ from albercik_chatbot.persistence.models import (
     ProviderKind,
     UsageRecord,
 )
-from albercik_chatbot.providers.llm.protocol import LLMResult
+from shiruno.providers.llm.protocol import LLMResult
 
 
 @pytest.mark.asyncio

@@ -60,8 +60,8 @@ import time
 
 import httpx
 
-from albercik_chatbot.infra.logging import get_logger
-from albercik_chatbot.providers.llm.protocol import (
+from shiruno.infra.logging import get_logger
+from shiruno.providers.llm.protocol import (
     ANSWERABILITY_JSON_SCHEMA,
     LLMProviderError,
     LLMResult,

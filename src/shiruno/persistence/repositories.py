@@ -11,8 +11,8 @@ FR-026), not this query's job.
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.domain.retrieval import RetrievedChunk
-from albercik_chatbot.persistence.models import DocumentChunk, KnowledgeDocument
+from shiruno.domain.retrieval import RetrievedChunk
+from shiruno.persistence.models import DocumentChunk, KnowledgeDocument
 
 
 def search_similar_chunks(

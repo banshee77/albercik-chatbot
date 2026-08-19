@@ -35,7 +35,7 @@ from fastapi import Request
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.persistence.models import RateLimitWindow
+from shiruno.persistence.models import RateLimitWindow
 
 _WINDOW_SECONDS = 60
 

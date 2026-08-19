@@ -26,9 +26,9 @@ from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
 
-from albercik_chatbot.domain.chunking import chunk_text
-from albercik_chatbot.domain.scope import is_albertos_scope
-from albercik_chatbot.providers.embedding.local_sentence_transformer_provider import (
+from shiruno.domain.chunking import chunk_text
+from shiruno.domain.scope import is_albertos_scope
+from shiruno.providers.embedding.local_sentence_transformer_provider import (
     LocalSentenceTransformerEmbeddingProvider,
 )
 

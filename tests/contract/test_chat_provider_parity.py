@@ -17,16 +17,16 @@ import uuid
 
 import pytest
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.domain.prompting import SYSTEM_PROMPT
-from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
-from albercik_chatbot.persistence.models import (
+from shiruno.config import get_settings
+from shiruno.domain.prompting import SYSTEM_PROMPT
+from shiruno.infra.concurrency import ChatConcurrencyGuard
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,
     KnowledgeDocument,
 )
-from albercik_chatbot.providers.llm.protocol import LLMProviderError
+from shiruno.providers.llm.protocol import LLMProviderError
 from tests.fixtures.prompt_injection import VISITOR_INJECTION_MESSAGES
 from tests.fixtures.provider_app import build_app, client_for
 

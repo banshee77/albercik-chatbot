@@ -2,7 +2,7 @@
 provisioning (FR-004a). No HTTP endpoint creates an Administrator row;
 this is the only way, run manually:
 
-    uv run python -m albercik_chatbot.cli create-admin --username admin
+    uv run python -m shiruno.cli create-admin --username admin
 
 The password is prompted for interactively (`getpass`, no echo) and
 confirmed — it is never required on the command line, so it never lands in
@@ -24,9 +24,9 @@ import sys
 
 from sqlalchemy.exc import IntegrityError
 
-from albercik_chatbot.infra.security import hash_password
-from albercik_chatbot.persistence.database import get_session_factory
-from albercik_chatbot.persistence.models import Administrator
+from shiruno.infra.security import hash_password
+from shiruno.persistence.database import get_session_factory
+from shiruno.persistence.models import Administrator
 
 
 def create_admin(username: str, password: str) -> None:
@@ -56,7 +56,7 @@ def _prompt_for_password() -> str:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m albercik_chatbot.cli")
+    parser = argparse.ArgumentParser(prog="python -m shiruno.cli")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     create_admin_parser = subparsers.add_parser(

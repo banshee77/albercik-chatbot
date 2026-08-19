@@ -15,8 +15,8 @@ the document, and never the false claim the document tries to plant.
 import pytest
 from sqlalchemy import select
 
-from albercik_chatbot.domain.prompting import SYSTEM_PROMPT
-from albercik_chatbot.persistence.models import DocumentChunk
+from shiruno.domain.prompting import SYSTEM_PROMPT
+from shiruno.persistence.models import DocumentChunk
 from tests.fixtures.admin import seed_admin_and_token
 from tests.fixtures.prompt_injection import (
     DELIMITER_BREAKOUT_DOCUMENT_CONTENT,

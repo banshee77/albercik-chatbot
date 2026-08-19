@@ -1,20 +1,37 @@
-# Albercik Chatbot
+# Shiruno
 
-A security-first RAG customer-support chatbot for a single company,
-**Albertos**. A Public User asks Polish-language questions on a public,
-unauthenticated `/api/v1/chat` endpoint; an Administrator signs in and
-manages the `.txt` knowledge base the chatbot answers from. Every answer
-is grounded exclusively in that knowledge base — the chatbot declines
-off-topic questions and says so plainly when it doesn't have enough
-information, rather than guessing.
+**Knowledge that answers.**
 
-This is an MVP. See [Known limitations](#known-limitations) before
-treating it as production-ready.
+Turn your organization's knowledge into an assistant your customers can
+simply ask.
+
+**Shiruno** is a reusable, security-first RAG (Retrieval-Augmented
+Generation) chatbot platform: a public, unauthenticated `/api/v1/chat`
+endpoint answers a visitor's questions, grounded exclusively in a
+customer's own knowledge base, while an Administrator signs in separately
+to manage that knowledge base. The chatbot declines off-topic questions
+and says so plainly when it doesn't have enough information, rather than
+guessing.
+
+**Albertos**, a karate club, is Shiruno's first customer — the public
+website, chat widget, and knowledge base you'll find running this
+codebase today are the **Albertos reference implementation**, built on
+top of the reusable Shiruno platform (`src/shiruno/` minus
+`public_site/`). See [`docs/architecture.md`](docs/architecture.md) for
+the full product/customer boundary, current architecture diagram, and
+documented (not-yet-built) future direction — a standalone Shiruno
+Widget and a Shiruno Platform / Customer Admin.
+
+This is an MVP, currently serving one customer. See
+[Known limitations](#known-limitations) before treating it as
+production-ready.
 
 ## Architecture
 
-- **API**: FastAPI (Python), single backend service — no separate
-  frontend/chat widget yet.
+- **API**: FastAPI (Python), single backend service. A public chat widget
+  (feature 006/007) is embedded in the Albertos website; there is no
+  standalone, site-independent widget distribution yet (see "Future:
+  Shiruno Widget" in [`docs/architecture.md`](docs/architecture.md)).
 - **Database**: PostgreSQL + `pgvector`, single-tenant (no
   `organization_id`/tenant table — one Albertos knowledge base).
 - **Embeddings**: local `sentence-transformers`
@@ -159,7 +176,7 @@ automatic local-model provisioning, with a single command:
 uv sync
 docker compose up -d db
 uv run alembic upgrade head
-uv run python -m albercik_chatbot.cli create-admin --username admin
+uv run python -m shiruno.cli create-admin --username admin
 docker compose up -d          # brings up ollama + ollama-init (auto model
                                #   provisioning) + app in dependency order
 curl localhost:8000/health
@@ -223,7 +240,10 @@ This is an MVP, not a production deployment. Explicitly not solved yet:
   raising the threshold further, keyword heuristics, an LLM classifier, a
   reranker, or hybrid search — validate against real Albertos content
   first.
-- **No frontend/chat widget yet.** `/api/v1/chat` is a JSON API only.
+- **No standalone widget distribution yet.** The chat widget (feature
+  006/007) is embedded in the Albertos website only; `/api/v1/chat` is a
+  JSON API any site could call, but there's no packaged, site-independent
+  "Shiruno Widget" script yet — see `docs/architecture.md`.
 - **The ≥85% insufficient-information rejection target (spec SC-002) is an
   MVP acceptance gate, not a statistical production guarantee.** It's
   phrased as "at least 6 of the 7 `insufficient_information`-expected
@@ -314,20 +334,34 @@ This is an MVP, not a production deployment. Explicitly not solved yet:
 
 ## Repository layout
 
+**Current structure** — one Python package, `shiruno`, containing both
+the reusable platform and the one customer reference implementation built
+on it. See [`docs/architecture.md`](docs/architecture.md) for the
+product/customer boundary explanation and the aspirational target
+monorepo layout (`apps/`, `packages/`, `examples/`) this may grow toward.
+
 ```text
-src/albercik_chatbot/
-├── api/            # FastAPI routers, request/response schemas, error mapping
-├── application/     # Use cases (ask_question, upload/list/delete document)
-├── domain/          # Framework-free logic: chunking, scope, retrieval, prompting
-├── persistence/      # SQLAlchemy models, session, repositories
-├── providers/        # LLM/embedding Protocols + concrete implementations
-├── infra/            # Cross-cutting: security, logging, audit, rate limit, budget, concurrency
-├── cli.py            # `create-admin` out-of-band provisioning command
-└── main.py           # FastAPI app factory
+src/shiruno/                # Shiruno Platform (reusable) + Albertos reference implementation
+├── api/            # FastAPI routers, request/response schemas, error mapping   — platform
+├── application/     # Use cases (ask_question, upload/list/delete document)      — platform
+├── domain/          # Framework-free logic: chunking, scope, retrieval, prompting — platform
+├── persistence/      # SQLAlchemy models, session, repositories                   — platform
+├── providers/        # LLM/embedding Protocols + concrete implementations         — platform
+├── infra/            # Cross-cutting: security, logging, audit, rate limit, budget, concurrency — platform
+├── public_site/       # Albertos public website, templates, static assets, chat widget front-end
+│                       #   — Albertos reference implementation, NOT part of the reusable platform
+├── cli.py            # `create-admin` out-of-band provisioning command             — platform
+└── main.py           # FastAPI app factory (composition root)                     — platform
+
+docs/architecture.md    # current + target architecture, future Widget/Admin boundaries
 
 specs/001-albertos-rag-chatbot/                       # spec, plan, research, data model, contracts, tasks
 specs/002-add-ollama-provider/                         # local Ollama backend + automatic provisioning
 specs/003-ollama-gpu-acceleration/                     # NVIDIA GPU passthrough for the ollama service
 specs/004-rag-answerability-and-ollama-performance/    # structured answerability, OLLAMA_THINK, eval tooling
+specs/005-public-club-website/                         # Albertos public website (public_site/)
+specs/006-public-chat-widget/                          # public chat widget
+specs/007-conversational-chat-ux/                      # small talk, assistant identity, avatar
+specs/008-shiruno-repository-architecture/             # this rebrand/architecture refactor
 tests/{unit,integration,contract,fakes,fixtures}/
 ```

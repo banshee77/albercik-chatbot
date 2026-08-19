@@ -1,7 +1,7 @@
 """Static training-location content for the public website (demo/fictional
 content — feature 005-public-club-website)."""
 
-from albercik_chatbot.public_site.models import Location
+from shiruno.public_site.models import Location
 
 LOCATIONS: tuple[Location, ...] = (
     Location(

@@ -30,7 +30,7 @@ this module is ever reached and do not depend on the model behaving.
 import uuid
 from dataclasses import dataclass
 
-from albercik_chatbot.domain.retrieval import RetrievedChunk
+from shiruno.domain.retrieval import RetrievedChunk
 
 SYSTEM_PROMPT = (
     "Jesteś Albercikiem, asystentem obsługi klienta wyłącznie dla Albertos "

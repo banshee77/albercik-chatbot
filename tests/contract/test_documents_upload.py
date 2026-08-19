@@ -18,8 +18,8 @@ import uuid
 import pytest
 from sqlalchemy import func, select
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.persistence.models import DocumentChunk, KnowledgeDocument
+from shiruno.config import get_settings
+from shiruno.persistence.models import DocumentChunk, KnowledgeDocument
 from tests.fixtures.admin import seed_admin_and_token
 
 

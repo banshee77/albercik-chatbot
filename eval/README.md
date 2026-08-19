@@ -1,6 +1,6 @@
-# Albercik RAG Evaluation Dataset
+# Shiruno RAG Evaluation Dataset
 
-This directory contains a fixed set of evaluation questions for the ALBERTOS/Albercik chatbot.
+This directory contains a fixed set of evaluation questions for the Albertos / Shiruno chatbot.
 
 **Current status (2026-08-19)**: feature 004 is **complete**. The default
 Ollama model is `qwen3:8b`, measuring a deterministic **19/20 (95%)**

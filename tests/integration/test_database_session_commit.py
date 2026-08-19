@@ -16,10 +16,10 @@ import uuid
 from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import Session as OrmSession
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.persistence import database
-from albercik_chatbot.persistence.database import get_session
-from albercik_chatbot.persistence.models import Administrator
+from shiruno.config import get_settings
+from shiruno.persistence import database
+from shiruno.persistence.database import get_session
+from shiruno.persistence.models import Administrator
 
 TEST_DATABASE_URL = "postgresql+psycopg://albercik:albercik@localhost:5433/albercik_test"
 

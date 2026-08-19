@@ -12,7 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from albercik_chatbot.infra.logging import get_logger
+from shiruno.infra.logging import get_logger
 
 logger = get_logger(__name__)
 

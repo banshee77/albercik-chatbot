@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from albercik_chatbot.config import get_settings
+from shiruno.config import get_settings
 
 
 class ChatRequest(BaseModel):

@@ -7,7 +7,7 @@ retry loop on top of the real provider's (Design Constraint 1) configure
 `error` and assert on `call_count`.
 """
 
-from albercik_chatbot.providers.llm.protocol import LLMResult
+from shiruno.providers.llm.protocol import LLMResult
 
 
 class FakeLLMProvider:

@@ -11,8 +11,8 @@ import httpx
 import pytest
 from anthropic import APIConnectionError, APIStatusError, APITimeoutError
 
-from albercik_chatbot.providers.llm.anthropic_provider import AnthropicLLMProvider
-from albercik_chatbot.providers.llm.protocol import ANSWERABILITY_JSON_SCHEMA, LLMProviderError
+from shiruno.providers.llm.anthropic_provider import AnthropicLLMProvider
+from shiruno.providers.llm.protocol import ANSWERABILITY_JSON_SCHEMA, LLMProviderError
 
 _REQUEST = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
 
@@ -239,7 +239,7 @@ def test_provider_timeout_is_bounded_and_fails_safely() -> None:
 
 
 def test_configured_timeout_is_passed_to_the_anthropic_client() -> None:
-    with patch("albercik_chatbot.providers.llm.anthropic_provider.Anthropic") as mock_client_cls:
+    with patch("shiruno.providers.llm.anthropic_provider.Anthropic") as mock_client_cls:
         AnthropicLLMProvider(
             api_key="unused", model="claude-fake", max_retries=2, timeout_seconds=7.5
         )

@@ -6,9 +6,9 @@ an authenticated Administrator (US3.7-style parity, requirement #11).
 
 import pytest
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.infra.security import hash_password, issue_access_token
-from albercik_chatbot.persistence.models import Administrator
+from shiruno.config import get_settings
+from shiruno.infra.security import hash_password, issue_access_token
+from shiruno.persistence.models import Administrator
 
 
 def _seed_admin_token(db_session) -> str:

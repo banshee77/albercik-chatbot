@@ -24,9 +24,9 @@ import uuid
 import pytest
 from sqlalchemy import select
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
-from albercik_chatbot.persistence.models import (
+from shiruno.config import get_settings
+from shiruno.infra.concurrency import ChatConcurrencyGuard
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,

@@ -6,9 +6,9 @@ identically for a Public User and an authenticated Administrator.
 
 import pytest
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.infra.security import hash_password, issue_access_token
-from albercik_chatbot.persistence.models import Administrator
+from shiruno.config import get_settings
+from shiruno.infra.security import hash_password, issue_access_token
+from shiruno.persistence.models import Administrator
 
 
 @pytest.mark.asyncio

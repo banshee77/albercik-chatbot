@@ -8,7 +8,7 @@ whatever's actually in the real `.env` file.
 import pytest
 from pydantic import ValidationError
 
-from albercik_chatbot.config import Settings
+from shiruno.config import Settings
 
 
 def test_short_jwt_secret_is_rejected() -> None:

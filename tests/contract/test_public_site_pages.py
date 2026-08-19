@@ -9,12 +9,12 @@ real model load or network call.
 
 from fastapi.testclient import TestClient
 
-from albercik_chatbot.main import create_app
-from albercik_chatbot.public_site.data.glossary import GLOSSARY_TERMS
-from albercik_chatbot.public_site.data.locations import LOCATIONS
-from albercik_chatbot.public_site.data.news import NEWS_POSTS
-from albercik_chatbot.public_site.data.sessions import SESSIONS
-from albercik_chatbot.public_site.data.trainers import TRAINERS
+from shiruno.main import create_app
+from shiruno.public_site.data.glossary import GLOSSARY_TERMS
+from shiruno.public_site.data.locations import LOCATIONS
+from shiruno.public_site.data.news import NEWS_POSTS
+from shiruno.public_site.data.sessions import SESSIONS
+from shiruno.public_site.data.trainers import TRAINERS
 from tests.fakes.fake_embedding_provider import FakeEmbeddingProvider
 from tests.fakes.fake_llm_provider import FakeLLMProvider
 

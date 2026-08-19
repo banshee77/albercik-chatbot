@@ -39,8 +39,8 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.infra.logging import get_logger
-from albercik_chatbot.persistence.models import ProviderKind, ProviderName, UsageRecord
+from shiruno.infra.logging import get_logger
+from shiruno.persistence.models import ProviderKind, ProviderName, UsageRecord
 
 logger = get_logger(__name__)
 

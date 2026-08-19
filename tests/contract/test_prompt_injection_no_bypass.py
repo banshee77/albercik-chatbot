@@ -10,8 +10,8 @@ import uuid
 
 import pytest
 
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.persistence.models import ProviderKind, ProviderName, UsageRecord
+from shiruno.config import get_settings
+from shiruno.persistence.models import ProviderKind, ProviderName, UsageRecord
 from tests.fixtures.admin import seed_admin_and_token
 from tests.fixtures.prompt_injection import VISITOR_INJECTION_MESSAGES
 from tests.fixtures.provider_app import build_app, client_for

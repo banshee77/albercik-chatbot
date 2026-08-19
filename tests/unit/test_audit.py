@@ -8,12 +8,12 @@ through, so this is a structural guarantee, not just a convention.
 import logging
 import uuid
 
-from albercik_chatbot.infra.audit import log_audit_event
+from shiruno.infra.audit import log_audit_event
 
 
 def test_login_success_is_logged_with_administrator_id(caplog) -> None:
     admin_id = uuid.uuid4()
-    with caplog.at_level(logging.INFO, logger="albercik_chatbot.audit"):
+    with caplog.at_level(logging.INFO, logger="shiruno.audit"):
         log_audit_event(
             "login_success", outcome="success", administrator_id=admin_id, username="admin1"
         )
@@ -26,7 +26,7 @@ def test_login_success_is_logged_with_administrator_id(caplog) -> None:
 
 
 def test_login_failure_is_logged_without_administrator_id(caplog) -> None:
-    with caplog.at_level(logging.INFO, logger="albercik_chatbot.audit"):
+    with caplog.at_level(logging.INFO, logger="shiruno.audit"):
         log_audit_event("login_failure", outcome="failure", username="unknown-user")
 
     message = caplog.records[0].message
@@ -37,7 +37,7 @@ def test_login_failure_is_logged_without_administrator_id(caplog) -> None:
 def test_document_upload_is_logged_with_document_id(caplog) -> None:
     admin_id = uuid.uuid4()
     document_id = uuid.uuid4()
-    with caplog.at_level(logging.INFO, logger="albercik_chatbot.audit"):
+    with caplog.at_level(logging.INFO, logger="shiruno.audit"):
         log_audit_event(
             "document_upload",
             outcome="success",
@@ -53,7 +53,7 @@ def test_document_upload_is_logged_with_document_id(caplog) -> None:
 def test_document_delete_not_found_is_logged(caplog) -> None:
     admin_id = uuid.uuid4()
     document_id = uuid.uuid4()
-    with caplog.at_level(logging.INFO, logger="albercik_chatbot.audit"):
+    with caplog.at_level(logging.INFO, logger="shiruno.audit"):
         log_audit_event(
             "document_delete",
             outcome="not_found",
@@ -69,7 +69,7 @@ def test_audit_event_never_accepts_password_or_secret_looking_content(caplog) ->
     # There is no `password`/`token`/`content` parameter on this function
     # at all — this test documents that fact by using every parameter the
     # function actually has and confirming nothing beyond them can leak in.
-    with caplog.at_level(logging.INFO, logger="albercik_chatbot.audit"):
+    with caplog.at_level(logging.INFO, logger="shiruno.audit"):
         log_audit_event(
             "login_success",
             outcome="success",

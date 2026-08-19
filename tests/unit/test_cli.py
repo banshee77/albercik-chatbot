@@ -6,7 +6,7 @@ credential handling — secure interactive prompting is the default path,
 
 import pytest
 
-from albercik_chatbot import cli
+from shiruno import cli
 
 
 def test_prompt_for_password_returns_password_when_confirmed(monkeypatch) -> None:

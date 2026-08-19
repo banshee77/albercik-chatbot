@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.persistence.models import KnowledgeDocument
+from shiruno.persistence.models import KnowledgeDocument
 
 
 def list_documents(session: Session) -> list[KnowledgeDocument]:

@@ -27,7 +27,7 @@ import uuid
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.api.deps import (
+from shiruno.api.deps import (
     get_chat_concurrency_guard,
     get_embedding_provider,
     get_llm_model_name,
@@ -35,14 +35,14 @@ from albercik_chatbot.api.deps import (
     get_llm_provider_name,
     require_bounded_request_body,
 )
-from albercik_chatbot.api.schemas import ChatRequest, ChatResponse, SourceReferenceOut
-from albercik_chatbot.application.ask_question import ChatSafetyConfig, ask_question
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
-from albercik_chatbot.infra.rate_limit import resolve_client_ip
-from albercik_chatbot.persistence.database import get_session
-from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
-from albercik_chatbot.providers.llm.protocol import LLMProvider
+from shiruno.api.schemas import ChatRequest, ChatResponse, SourceReferenceOut
+from shiruno.application.ask_question import ChatSafetyConfig, ask_question
+from shiruno.config import get_settings
+from shiruno.infra.concurrency import ChatConcurrencyGuard
+from shiruno.infra.rate_limit import resolve_client_ip
+from shiruno.persistence.database import get_session
+from shiruno.providers.embedding.protocol import EmbeddingProvider
+from shiruno.providers.llm.protocol import LLMProvider
 
 router = APIRouter(prefix="/api/v1", tags=["chat"])
 

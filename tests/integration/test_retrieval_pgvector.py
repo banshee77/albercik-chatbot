@@ -12,14 +12,14 @@ from datetime import UTC, datetime
 
 import pytest
 
-from albercik_chatbot.domain.retrieval import select_sufficient_chunks
-from albercik_chatbot.persistence.models import (
+from shiruno.domain.retrieval import select_sufficient_chunks
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,
     KnowledgeDocument,
 )
-from albercik_chatbot.persistence.repositories import search_similar_chunks
+from shiruno.persistence.repositories import search_similar_chunks
 from tests.fakes.fake_embedding_provider import FakeEmbeddingProvider
 
 

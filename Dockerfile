@@ -37,4 +37,4 @@ EXPOSE 8000
 # --factory: main.py deliberately has no module-level `app` (see main.py
 # docstring) so importing it never has the side effect of constructing
 # real providers / loading the real embedding model.
-CMD ["uv", "run", "uvicorn", "albercik_chatbot.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "shiruno.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

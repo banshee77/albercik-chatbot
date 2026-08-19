@@ -6,11 +6,11 @@ protect against authoring mistakes (a typo'd slug reference, too few
 example entries), not against malicious input.
 """
 
-from albercik_chatbot.public_site.data.glossary import GLOSSARY_TERMS
-from albercik_chatbot.public_site.data.locations import LOCATIONS
-from albercik_chatbot.public_site.data.news import NEWS_POSTS
-from albercik_chatbot.public_site.data.sessions import SESSIONS
-from albercik_chatbot.public_site.data.trainers import TRAINERS
+from shiruno.public_site.data.glossary import GLOSSARY_TERMS
+from shiruno.public_site.data.locations import LOCATIONS
+from shiruno.public_site.data.news import NEWS_POSTS
+from shiruno.public_site.data.sessions import SESSIONS
+from shiruno.public_site.data.trainers import TRAINERS
 
 _REQUIRED_NEWS_CATEGORIES = {
     "Sezon",

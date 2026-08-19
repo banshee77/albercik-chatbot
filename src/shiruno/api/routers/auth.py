@@ -13,13 +13,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.api.errors import UnauthorizedError
-from albercik_chatbot.api.schemas import LoginRequest, LoginResponse
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.infra.audit import log_audit_event
-from albercik_chatbot.infra.security import hash_password, issue_access_token, verify_password
-from albercik_chatbot.persistence.database import get_session
-from albercik_chatbot.persistence.models import Administrator
+from shiruno.api.errors import UnauthorizedError
+from shiruno.api.schemas import LoginRequest, LoginResponse
+from shiruno.config import get_settings
+from shiruno.infra.audit import log_audit_event
+from shiruno.infra.security import hash_password, issue_access_token, verify_password
+from shiruno.persistence.database import get_session
+from shiruno.persistence.models import Administrator
 
 router = APIRouter(prefix="/api/v1", tags=["auth"])
 

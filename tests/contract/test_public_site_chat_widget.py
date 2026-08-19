@@ -16,7 +16,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from albercik_chatbot.main import create_app
+from shiruno.main import create_app
 from tests.fakes.fake_embedding_provider import FakeEmbeddingProvider
 from tests.fakes.fake_llm_provider import FakeLLMProvider
 
@@ -27,7 +27,7 @@ client = TestClient(
 _SITE_CSS_PATH = (
     Path(__file__).resolve().parents[2]
     / "src"
-    / "albercik_chatbot"
+    / "shiruno"
     / "public_site"
     / "static"
     / "css"
@@ -36,7 +36,7 @@ _SITE_CSS_PATH = (
 _AVATAR_SVG_PATH = (
     Path(__file__).resolve().parents[2]
     / "src"
-    / "albercik_chatbot"
+    / "shiruno"
     / "public_site"
     / "static"
     / "img"

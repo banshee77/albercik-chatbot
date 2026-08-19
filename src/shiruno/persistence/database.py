@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 @lru_cache
 def get_engine(database_url: str | None = None) -> Engine:
     """One engine per process (one per distinct URL, in practice one)."""
-    from albercik_chatbot.config import get_settings
+    from shiruno.config import get_settings
 
     url = database_url or get_settings().DATABASE_URL
     return create_engine(url, pool_pre_ping=True)

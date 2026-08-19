@@ -11,7 +11,7 @@ cases.
 
 import pytest
 
-from albercik_chatbot.domain.small_talk import classify_small_talk
+from shiruno.domain.small_talk import classify_small_talk
 
 _GREETINGS = [
     "Cześć",

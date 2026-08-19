@@ -5,8 +5,8 @@ FR-029, FR-031). No DB, no providers.
 
 import uuid
 
-from albercik_chatbot.domain.prompting import SYSTEM_PROMPT, assemble_prompt, extract_sources
-from albercik_chatbot.domain.retrieval import RetrievedChunk
+from shiruno.domain.prompting import SYSTEM_PROMPT, assemble_prompt, extract_sources
+from shiruno.domain.retrieval import RetrievedChunk
 from tests.fixtures.prompt_injection import (
     DELIMITER_BREAKOUT_DOCUMENT_CONTENT,
     MALICIOUS_DOCUMENT_CONTENT,

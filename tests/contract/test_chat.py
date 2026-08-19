@@ -17,7 +17,7 @@ import uuid
 
 import pytest
 
-from albercik_chatbot.persistence.models import (
+from shiruno.persistence.models import (
     Administrator,
     DocumentChunk,
     DocumentStatus,

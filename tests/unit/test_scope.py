@@ -5,7 +5,7 @@ message out-of-scope). Deterministic, no provider calls.
 
 import pytest
 
-from albercik_chatbot.domain.scope import is_albertos_scope
+from shiruno.domain.scope import is_albertos_scope
 
 
 @pytest.mark.parametrize(

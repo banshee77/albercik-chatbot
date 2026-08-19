@@ -18,14 +18,14 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from albercik_chatbot.api.errors import PayloadTooLargeError, UnauthorizedError
-from albercik_chatbot.config import get_settings
-from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
-from albercik_chatbot.infra.security import verify_access_token
-from albercik_chatbot.persistence.database import get_session
-from albercik_chatbot.persistence.models import Administrator
-from albercik_chatbot.providers.embedding.protocol import EmbeddingProvider
-from albercik_chatbot.providers.llm.protocol import LLMProvider
+from shiruno.api.errors import PayloadTooLargeError, UnauthorizedError
+from shiruno.config import get_settings
+from shiruno.infra.concurrency import ChatConcurrencyGuard
+from shiruno.infra.security import verify_access_token
+from shiruno.persistence.database import get_session
+from shiruno.persistence.models import Administrator
+from shiruno.providers.embedding.protocol import EmbeddingProvider
+from shiruno.providers.llm.protocol import LLMProvider
 
 _GENERIC_AUTH_FAILURE = "Authentication required."
 

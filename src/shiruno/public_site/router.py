@@ -13,12 +13,12 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from albercik_chatbot.public_site.data.glossary import GLOSSARY_TERMS
-from albercik_chatbot.public_site.data.locations import LOCATIONS
-from albercik_chatbot.public_site.data.news import NEWS_POSTS
-from albercik_chatbot.public_site.data.sessions import SESSIONS
-from albercik_chatbot.public_site.data.trainers import TRAINERS
-from albercik_chatbot.public_site.filters import filter_news, filter_sessions
+from shiruno.public_site.data.glossary import GLOSSARY_TERMS
+from shiruno.public_site.data.locations import LOCATIONS
+from shiruno.public_site.data.news import NEWS_POSTS
+from shiruno.public_site.data.sessions import SESSIONS
+from shiruno.public_site.data.trainers import TRAINERS
+from shiruno.public_site.filters import filter_news, filter_sessions
 
 router = APIRouter(tags=["public-site"])
 

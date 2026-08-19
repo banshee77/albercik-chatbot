@@ -6,7 +6,7 @@ independently unit-testable functions so the JS progressive-enhancement
 layer never has to duplicate this logic.
 """
 
-from albercik_chatbot.public_site.models import NewsPost, TrainingSession
+from shiruno.public_site.models import NewsPost, TrainingSession
 
 
 def filter_sessions(

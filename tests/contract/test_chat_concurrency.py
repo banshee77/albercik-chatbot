@@ -16,7 +16,7 @@ deterministic and exercises the same code path.
 
 import pytest
 
-from albercik_chatbot.infra.concurrency import ChatConcurrencyGuard
+from shiruno.infra.concurrency import ChatConcurrencyGuard
 
 
 @pytest.mark.asyncio

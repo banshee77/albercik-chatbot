@@ -9,8 +9,8 @@ are rejected outright rather than silently ignored.
 import pytest
 from pydantic import ValidationError
 
-from albercik_chatbot.api.schemas import ChatRequest
-from albercik_chatbot.config import get_settings
+from shiruno.api.schemas import ChatRequest
+from shiruno.config import get_settings
 
 
 def test_question_within_configured_limit_is_accepted() -> None:

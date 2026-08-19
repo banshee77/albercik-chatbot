@@ -32,8 +32,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from albercik_chatbot.main import create_app
-from albercik_chatbot.persistence.models import Base
+from shiruno.main import create_app
+from shiruno.persistence.models import Base
 from tests.fakes.fake_embedding_provider import FakeEmbeddingProvider
 from tests.fakes.fake_llm_provider import FakeLLMProvider
 
@@ -73,7 +73,7 @@ async def db_async_client(test_app, db_session):
     (e.g. US1's chat outcomes, T030) rather than going through an upload
     endpoint. The route sees the exact rows the test just added, without a
     commit, and everything rolls back with `db_session` at teardown."""
-    from albercik_chatbot.persistence.database import get_session
+    from shiruno.persistence.database import get_session
 
     test_app.dependency_overrides[get_session] = lambda: db_session
     transport = ASGITransport(app=test_app)
