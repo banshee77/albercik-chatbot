@@ -72,7 +72,8 @@ a {
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+[tabindex]:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
@@ -213,6 +214,21 @@ select:focus-visible {
   .primary-nav ul {
     flex-direction: column;
     gap: 0;
+  }
+
+  /* Chat panel occupies most of the viewport on small screens, with all
+     controls kept reachable above an on-screen keyboard (FR-027). */
+  .chat-launcher {
+    right: var(--space-2);
+    bottom: var(--space-2);
+  }
+
+  .js .chat-panel {
+    right: var(--space-2);
+    bottom: var(--space-2);
+    left: var(--space-2);
+    width: auto;
+    max-height: calc(100vh - 2 * var(--space-2));
   }
 }
 
@@ -365,4 +381,161 @@ section + section {
 
 .site-footer a {
   color: #fff;
+}
+
+/* --- Chat widget (feature 006-public-club-chat-widget) ---
+   Reveal is gated behind the same `.js`-class mechanism the mobile nav
+   toggle already established (research.md §3): without JavaScript, the
+   launcher stays display:none and the panel stays [hidden] — never a
+   visible-but-dead control. */
+
+.chat-launcher {
+  display: none;
+  position: fixed;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 90;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.75rem 1.25rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.js .chat-launcher {
+  display: inline-flex;
+}
+
+.chat-launcher__icon {
+  display: inline-flex;
+}
+
+.chat-panel {
+  position: fixed;
+  right: var(--space-3);
+  bottom: calc(var(--space-3) * 2 + 3rem);
+  width: min(24rem, calc(100vw - 2 * var(--space-3)));
+  max-height: min(32rem, calc(100vh - 6rem));
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  z-index: 95;
+}
+
+.js .chat-panel {
+  display: none;
+}
+
+.js .chat-panel.is-open {
+  display: flex;
+}
+
+.chat-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--indigo);
+  color: #fff;
+}
+
+.chat-panel__header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.chat-panel__close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: var(--space-1);
+  cursor: pointer;
+}
+
+.chat-panel__scope {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.chat-messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-3);
+}
+
+.chat-message {
+  max-width: 85%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.chat-message--user {
+  align-self: flex-end;
+  background: var(--indigo);
+  color: #fff;
+}
+
+.chat-message--assistant {
+  align-self: flex-start;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.chat-message__sources {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.chat-status {
+  margin: 0;
+  min-height: 1.5rem;
+  padding: 0 var(--space-3);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.chat-status:empty {
+  min-height: 0;
+  padding: 0;
+}
+
+.chat-form {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.chat-form input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: inherit;
+}
+
+.chat-form .btn {
+  padding: 0.5rem 1rem;
 }

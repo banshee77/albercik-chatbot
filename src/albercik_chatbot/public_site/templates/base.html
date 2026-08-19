@@ -46,6 +46,56 @@
     </div>
   </footer>
 
+  <button
+    type="button"
+    id="chat-launcher"
+    class="chat-launcher"
+    aria-haspopup="dialog"
+    aria-expanded="false"
+    aria-controls="chat-panel"
+    aria-label="Zapytaj Albertos — otwórz czat"
+  >
+    <span class="chat-launcher__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
+        <path
+          d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8A2.5 2.5 0 0 1 17.5 16H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13.5z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </span>
+    <span class="chat-launcher__label">Zapytaj Albertos</span>
+  </button>
+
+  <div
+    id="chat-panel"
+    class="chat-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="chat-panel-title"
+    hidden
+  >
+    <div class="chat-panel__header">
+      <h2 id="chat-panel-title" tabindex="-1">Albertos AI</h2>
+      <button type="button" id="chat-close" class="chat-panel__close" aria-label="Zamknij czat">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <p id="chat-scope-notice" class="chat-panel__scope">
+      Zapytaj o treningi, grafik, trenerów, sekcje i informacje o klubie.
+    </p>
+    <div id="chat-messages" class="chat-messages" role="log" aria-live="polite" aria-atomic="false"></div>
+    <p id="chat-status" class="chat-status" role="status" aria-live="polite"></p>
+    <form id="chat-form" class="chat-form">
+      <label for="chat-input" class="visually-hidden">Twoje pytanie</label>
+      <input type="text" id="chat-input" name="question" autocomplete="off" required>
+      <button type="submit" id="chat-send" class="btn btn--primary">Wyślij</button>
+    </form>
+  </div>
+
   <script src="/static/site/js/site.js" defer></script>
+  <script src="/static/site/js/chat.js" defer></script>
 </body>
 </html>
