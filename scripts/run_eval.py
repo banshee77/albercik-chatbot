@@ -68,6 +68,10 @@ QUESTIONS_FILE = REPO_ROOT / "eval" / "questions.jsonl"
 # hardcoded on purpose so repeat runs can log in without re-provisioning.
 _EVAL_ADMIN_USERNAME = "eval-runner"
 _EVAL_ADMIN_PASSWORD = "eval-runner-not-a-production-password-1"  # noqa: S105
+# This script only ever targets the Albertos reference instance (see the
+# module docstring) — matches config.Settings.PUBLIC_CHAT_TENANT_SLUG's
+# own default (feature 011-conversations-analytics).
+_EVAL_ADMIN_TENANT_SLUG = "albertos"
 
 _NS_PER_SECOND = 1_000_000_000
 
@@ -81,6 +85,8 @@ def _ensure_eval_admin() -> None:
             "-m",
             "shiruno.cli",
             "create-admin",
+            "--tenant",
+            _EVAL_ADMIN_TENANT_SLUG,
             "--username",
             _EVAL_ADMIN_USERNAME,
             "--password",
