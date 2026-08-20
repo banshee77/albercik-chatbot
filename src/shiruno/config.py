@@ -241,6 +241,15 @@ class Settings(BaseSettings):
     OBSERVABILITY_CAPTURE_QUESTION_ANSWER_CONTENT: bool = False
     OBSERVABILITY_CAPTURE_DOCUMENT_PROMPT_CONTENT: bool = False
 
+    # --- Browser/API CORS (feature 013-admin-platform-shell, research.md
+    # R8) ---
+
+    # Comma-separated origin list, matching this project's existing
+    # comma-separated-list convention (see OTEL_EXPORTER_OTLP_HEADERS
+    # above). Empty by default: no CORSMiddleware is registered at all
+    # until this is explicitly set (FR-024) — never a wildcard origin.
+    CORS_ALLOWED_ORIGINS: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

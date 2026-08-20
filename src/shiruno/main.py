@@ -26,6 +26,7 @@ constructing real providers.
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from opentelemetry.trace import Tracer
 
@@ -79,6 +80,23 @@ def create_app(
 
     app = FastAPI(title="Shiruno API", version="0.1.0")
     register_exception_handlers(app)
+
+    # Browser/API CORS (feature 013-admin-platform-shell, research.md R8):
+    # only registered when an operator has explicitly configured an origin
+    # allow-list — never a wildcard, and never enabled by default (FR-024).
+    if settings.CORS_ALLOWED_ORIGINS:
+        allowed_origins = [
+            origin.strip()
+            for origin in settings.CORS_ALLOWED_ORIGINS.split(",")
+            if origin.strip()
+        ]
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=allowed_origins,
+            allow_credentials=False,
+            allow_methods=["GET", "POST"],
+            allow_headers=["Authorization", "Content-Type"],
+        )
 
     # The active model name, computed once here regardless of whether the
     # actual provider object below is real or (in every test) injected —

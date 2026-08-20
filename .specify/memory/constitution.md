@@ -1,63 +1,76 @@
 <!--
 Sync Impact Report
-Version change: 4.0.0 → 4.1.0
-Rationale: MINOR — Principle XIV (Approved MVP Technology Stack) is
-  materially expanded, not redefined: its core substantive rule ("a fixed,
-  named stack; anything outside it requires a constitution amendment")
-  is unchanged and is in fact the exact mechanism this amendment exercises.
-  OpenTelemetry is added to the approved stack as the vendor-neutral
-  tracing/observability standard, and Phoenix is approved narrowly as the
-  first optional operator/developer local-development OTLP backend reached
-  only through OpenTelemetry — both scoped by new explicit boundary rules
-  (observability must never participate in application decisions; backend
-  unavailability must never affect public chat). Principle IX (Privacy and
-  Logging) gains a new paragraph extending its existing privacy-by-default
-  posture to observability/OTLP export specifically. Neither principle's
-  prior rule is weakened, narrowed, or reversed — both are extended to
-  cover a new mechanism this project didn't have before, which the
-  versioning policy classifies as MINOR ("a new principle or materially
-  expanded section is added"). Feature 012 (LLM / RAG Observability) is
-  the concrete trigger: its plan identified that OpenTelemetry/Phoenix are
-  not on Principle XIV's current list, and Principle XIV's own text
-  requires an explicit amendment (not a plan-level justification) before
-  a technology outside that list may be used.
+Version change: 4.1.0 → 4.2.0
+Rationale: MINOR — seven existing principles (I, II, VII, VIII, XI, XIII,
+  XIV) are materially expanded, none redefined or weakened: Feature 013
+  (Shiruno Admin Platform Shell) is Shiruno's first browser-based/customer-
+  facing frontend application, and the constitution previously had no
+  approved frontend technology at all. Every addition below extends an
+  existing principle's already-stated rule to a new surface (the browser)
+  this project didn't have before — the same pattern v4.1.0 used for
+  OpenTelemetry/Phoenix — which the versioning policy classifies as MINOR
+  ("a new principle or materially expanded section is added"), not MAJOR
+  (no prior rule is relaxed, reversed, or removed).
 Modified principles:
-  - XIV. Approved MVP Technology Stack — expanded, not renamed. Added
-    OpenTelemetry to the approved stack list; added a new "Observability
-    boundary" paragraph defining what OpenTelemetry may be used for, that
-    it must remain strictly an observation mechanism, and that telemetry-
-    backend availability must never become a runtime dependency for
-    public chat; added a new paragraph narrowly approving Phoenix as an
-    optional, operator/developer-only, OTLP-reached, replaceable local
-    backend, and explicitly declining to approve Langfuse (or any backend)
-    as a required dependency or to approve any vendor-specific tracing SDK
-    inside application/domain code.
-  - IX. Privacy and Logging — expanded, not renamed. Added a new
-    "Observability data" paragraph applying this principle's existing
-    privacy-by-default posture to OpenTelemetry/OTLP export specifically:
-    no automatic export of secrets/credentials/tokens/raw embedding
-    vectors/hidden model reasoning under any configuration, and no
-    default export of full visitor question, assistant answer, retrieved
-    document/chunk, or assembled prompt content — richer content capture
-    for development diagnostics requires explicit, separate,
-    off-by-default configuration.
+  - XIV. Approved MVP Technology Stack — expanded. TypeScript, React,
+    Vite, and React Router added to the approved stack, scoped narrowly to
+    browser-based Shiruno applications under `apps/*` (the first being
+    `apps/admin/`); a new "Approved frontend stack" paragraph explicitly
+    declines to approve Next.js, Redux, Zustand, GraphQL, Tailwind,
+    Material UI, Chakra, shadcn, Storybook, Nx, Turborepo, or any
+    server-side-rendering framework at this time.
+  - I. Security by Default — expanded. New "Browser authentication and
+    frontend configuration" paragraph: browser apps authenticate only
+    through the existing server-side mechanism; for Feature 013 the token
+    is held in memory only (never `localStorage`/`sessionStorage`, never
+    in a URL, never embedded in frontend build configuration), with
+    weakening that decision requiring a future, explicitly
+    security-reviewed feature rather than an incidental side effect; and
+    frontend build-time environment variables are confirmed public
+    configuration that must never carry a secret.
+  - II. Multi-Tenant Isolation by Default — expanded. New "Frontend is
+    never a security boundary" paragraph applying this principle's
+    existing Rules 3-4 explicitly to browser clients: a frontend must
+    never select/submit tenant identity, and hiding UI is never an
+    authorization control.
+  - VII. Provider and Cloud Neutrality — expanded. New "Frontend
+    deployment neutrality" paragraph: approving a frontend build tool
+    under Principle XIV does not commit Shiruno to any specific hosting
+    provider; production frontend hosting is deferred exactly as backend
+    hosting already is.
+  - VIII. API Security — expanded. New "Browser/API integration"
+    paragraph: cross-origin access for a browser-based Shiruno application
+    requires an explicit, narrow, server-configured origin allow-list —
+    never a wildcard — for authenticated Admin Platform traffic.
+  - XI. Testing Discipline — expanded. New "Frontend quality gates"
+    paragraph: customer-facing frontend features require automated
+    component/behavior tests, type checking, linting, and a production
+    build gate, none depending on a real LLM/Ollama/Phoenix/network;
+    backend security/tenant-isolation tests remain independently
+    authoritative regardless.
+  - XIII. Simplicity for MVP — expanded. New "Frontend simplicity"
+    paragraph: frontend libraries only for a concrete current need; no
+    speculative design system, state-management architecture beyond
+    React's own, SSR layer, or monorepo tooling; React's built-in
+    state/context preferred until demonstrably insufficient.
 Other sections updated for consistency with the above (no other
   principle's substance changed):
-  - MVP Scope Boundaries — added an "Explicitly deferrable" bullet noting
-    the optional local observability backend (Phoenix) is never required
-    for any normal development or production path; added an "Explicitly
-    not built" bullet naming LangChain, LangGraph, Grafana, Prometheus,
-    Langfuse-as-a-required-platform, production alerting infrastructure,
-    and customer-facing trace access as out of scope for this amendment.
+  - Separation of Concerns — added a new "Frontend application boundary"
+    subsection describing the `apps/*` (frontend) / `src/shiruno/`
+    (backend) split, matching Feature 013's own architecture direction.
+  - MVP Scope Boundaries — added an "Explicitly not built" bullet naming
+    the frontend technologies this amendment declines to approve; added an
+    "Explicitly deferrable" bullet for production frontend hosting.
   - Development Workflow & Quality Gates — added an instruction that a
-    reviewer touching tracing/observability code MUST verify the
-    Principle XIV observability boundary (no influence on application
-    decisions, no new runtime dependency for public chat) and Principle
-    IX's export-content defaults are intact.
-  - Governance / Compliance review — Principle IX added to the
-    critical-severity scrutiny list alongside I, II, III, V, VI, X, XI,
-    since observability export is now an explicit, named data-leak
-    surface this constitution governs.
+    reviewer touching frontend code MUST verify no client-controlled
+    tenant identifier is sent, the token-storage rule (Principle I) is
+    intact, CORS stays narrow (Principle VIII), and TypeScript/lint/build
+    gates (Principle XI) pass.
+  - Governance / Compliance review — Principle VIII added to the
+    critical-severity scrutiny list (now I, II, III, V, VI, VIII, IX, X,
+    XI), since browser/CORS integration is a new, concrete leak-relevant
+    surface this constitution now governs; added frontend-specific
+    reviewer instructions under Principles I and II.
 Added principles/sections: none (principle count unchanged at XIV).
 Removed sections: none.
 Deferred TODOs: none.
@@ -87,6 +100,23 @@ secrets management MUST be selected based on the eventual hosting platform
 Vault) once that platform is chosen. All service and infrastructure
 permissions MUST follow least-privilege. Security MUST be enforced by
 application and infrastructure controls, not by prompts alone.
+
+**Browser authentication and frontend configuration** (added by this
+amendment, Feature 013-admin-platform-shell): a browser-based Shiruno
+application (e.g. `apps/admin/`) MUST authenticate through the existing
+server-side administrator authentication mechanism — never a second,
+frontend-only authentication scheme. For Feature 013, the authentication
+token MUST be held in memory only; it MUST NOT be persisted in
+`localStorage`, `sessionStorage`, or any other durable browser storage,
+MUST NOT appear in a URL, and MUST NOT be embedded in frontend build-time
+configuration. Weakening this specific token-storage decision (for
+example, adopting HttpOnly cookie sessions) MAY happen through a future,
+explicitly security-reviewed feature; it MUST NOT happen as an incidental
+side effect of an unrelated change. Frontend build-time environment
+variables (e.g. `VITE_SHIRUNO_API_URL`) are public configuration by
+construction — they MUST NEVER contain a secret, applying this
+principle's existing "no secrets in source code" rule to the browser
+build pipeline specifically.
 **Rationale**: The chatbot sits between untrusted external input (users,
 documents, model output) and the Albertos knowledge base. Defaulting to
 "untrusted" and keeping authz out of the LLM's hands is the only way to
@@ -143,6 +173,19 @@ rules govern every tenant-owned resource and every tenant-scoped operation:
     tenant filters in tenant-scoped code paths. No feature is required to
     implement full platform-admin capability unless its own specification
     explicitly requires it.
+
+**Frontend is never a security boundary** (added by this amendment,
+Feature 013-admin-platform-shell): Rules 3 and 4 above apply to
+browser-based Shiruno applications exactly as they apply to any other
+client — a frontend MUST NOT select, submit, or influence which tenant's
+data a request returns via a client-controlled `tenant_id` (or
+equivalent) value, and hiding a UI element MUST NEVER be treated as an
+authorization control. Tenant identity available to a browser application
+MUST be treated as informational/display-only, sourced exclusively from
+the authenticated administrator's own server-derived identity (e.g. the
+existing `GET /api/v1/admin/me` contract) — a frontend MUST NOT cache,
+infer, or accept a tenant identity from any other source and present it
+as authoritative.
 
 **Rationale**: Shiruno now has a real second architectural boundary — the
 tenant — because a concrete, near-term feature (Feature 009) introduces
@@ -240,6 +283,16 @@ alternatives such as Amazon Bedrock, another hosted LLM provider, or a
 self-hosted model, and embedding implementations MUST likewise remain
 replaceable. Cloud-specific infrastructure decisions are deferred until
 deployment requirements are known.
+
+**Frontend deployment neutrality** (added by this amendment, Feature
+013-admin-platform-shell): a browser-based Shiruno application's build
+MUST produce a deployment-neutral static artifact (e.g. Vite's own
+production build output) rather than one committing to a specific hosting
+provider's runtime. Approving a frontend build tool under Principle XIV
+MUST NOT be read as committing Shiruno to AWS, Vercel, Cloudflare,
+Netlify, or any other hosting provider — production frontend hosting
+remains a separate, deliberately deferred architectural decision, exactly
+as backend hosting already is under this principle.
 **Rationale**: Deferring the hosting decision is only safe if the codebase
 doesn't quietly accumulate cloud-specific assumptions while nobody is
 looking; isolating cloud integrations behind interfaces keeps the eventual
@@ -252,6 +305,15 @@ never after or interleaved with business logic. Production deployments
 MUST apply rate limiting. Stack traces, internal prompts, secrets, and
 infrastructure details MUST NEVER be exposed to end users in API responses
 or error messages.
+
+**Browser/API integration** (added by this amendment, Feature
+013-admin-platform-shell): when a browser-based Shiruno application and
+the API are served from different origins, cross-origin access MUST be
+enabled only through an explicit, narrowly server-configured allow-list of
+origins — an unrestricted wildcard origin
+(`Access-Control-Allow-Origin: *`) MUST NEVER be used for authenticated
+Shiruno Admin Platform traffic. Allowed origins are server configuration,
+never client-supplied or inferred.
 **Rationale**: The API is the contract boundary; validating and
 authorizing at the edge, and scrubbing internal detail from responses,
 keeps failures from becoming information disclosure.
@@ -316,6 +378,18 @@ injection handling, rate limiting, token/request limits, budget
 enforcement, kill-switch behavior, bounded retries, document deletion, and
 safe error responses. Tests SHOULD verify behavior and security invariants
 rather than internal implementation details whenever possible.
+
+**Frontend quality gates** (added by this amendment, Feature
+013-admin-platform-shell): a customer-facing Shiruno frontend feature MUST
+have automated component/behavior test coverage, MUST pass TypeScript type
+checking and linting, and MUST pass a production build verification — the
+frontend analogue of this principle's existing pytest/mockable-provider
+requirements. Frontend tests MUST NOT depend on a real LLM provider, real
+Ollama, Phoenix, or external network access, mirroring this principle's
+existing "mockable, no paid provider calls by default" rule. Backend
+security and tenant isolation remain authoritative regardless of any
+frontend test coverage — a frontend test proves frontend behavior, never a
+substitute for the backend tests this principle already requires.
 **Rationale**: Authorization and cost-safety are correctness properties
 that must be continuously verified — manual review alone will eventually
 miss a regression. Mockable providers keep the suite fast, deterministic,
@@ -357,6 +431,17 @@ maintainable by one developer, built from explicit Python code and a small
 number of well-defined modules. This principle bounds Principles V–VII:
 provider/cloud abstraction MUST stay at the level of a small interface, not
 a plugin framework or speculative multi-provider implementation.
+
+**Frontend simplicity** (added by this amendment, Feature
+013-admin-platform-shell): frontend libraries and infrastructure MUST only
+be introduced when a concrete, currently-needed feature requires them —
+the same "immediate, present requirement" standard this principle already
+applies to backend dependencies. Do not speculatively build a
+general-purpose design system, a state-management architecture beyond
+React's own built-in mechanisms, a server-side-rendering layer, or
+monorepo build tooling (e.g. Nx, Turborepo) ahead of a concrete need.
+React's built-in state/context mechanisms MUST be preferred until they are
+demonstrably insufficient for a real, currently-in-scope requirement.
 **Rationale**: Security and correctness are easier to reason about, review,
 and test in a simple, explicit codebase. Provider neutrality and clean
 layering are achieved through disciplined interface boundaries, not through
@@ -366,12 +451,13 @@ building out infrastructure for scenarios the project doesn't yet have.
 The MVP is built on: Python, FastAPI, PostgreSQL, pgvector, SQLAlchemy,
 Alembic, Claude (via the Anthropic API as the likely initial LLM transport,
 behind the Principle V interface), Docker / Docker Compose, `uv` for Python
-dependency management, and OpenTelemetry as the vendor-neutral standard for
-application/LLM-pipeline tracing and observability. No cloud hosting
-provider is fixed for the MVP. Introducing a technology outside this list,
-or committing to a specific cloud provider, requires an explicit amendment
-to this constitution (see Governance), justified by a concrete requirement
-this stack cannot meet.
+dependency management, OpenTelemetry as the vendor-neutral standard for
+application/LLM-pipeline tracing and observability, and — for browser-based
+Shiruno applications under `apps/*` only — TypeScript, React, Vite, and
+React Router. No cloud hosting provider is fixed for the MVP. Introducing a
+technology outside this list, or committing to a specific cloud provider,
+requires an explicit amendment to this constitution (see Governance),
+justified by a concrete requirement this stack cannot meet.
 
 **Observability boundary** (added by this amendment, Feature
 012-rag-observability): OpenTelemetry MAY be used for distributed/
@@ -406,6 +492,22 @@ the OpenTelemetry/OTLP boundary. No vendor-specific tracing SDK — Phoenix-
 specific, Langfuse-specific, or otherwise — MUST be imported or called from
 application/domain-layer code; only the OpenTelemetry API MUST be used
 there.
+
+**Approved frontend stack** (added by this amendment, Feature
+013-admin-platform-shell): TypeScript, React, Vite, and React Router are
+approved specifically for browser-based Shiruno applications living under
+`apps/*` (the first being `apps/admin/`, the customer-facing Shiruno Admin
+Platform) — never as a basis for restructuring or replacing the existing
+`src/shiruno/` Python/FastAPI backend. TypeScript MUST be used for Shiruno
+frontend application code; React is the approved UI framework; Vite is
+approved as the development server, build tool, and static
+production-build mechanism; React Router is approved for client-side
+routing. This amendment does NOT approve Next.js, Redux, Zustand, GraphQL,
+Tailwind, Material UI, Chakra, shadcn, Storybook, Nx, Turborepo, or any
+server-side-rendering framework — each remains a possible future,
+separately-justified addition (per this principle's own amendment
+requirement), not part of the current approved stack, precisely because
+none is required by Feature 013's actual scope.
 **Rationale**: A fixed, named stack keeps the MVP's surface area small and
 predictable, which directly supports Principle XIII (Simplicity) and makes
 security review tractable, while leaving LLM/embedding/hosting choices
@@ -420,7 +522,11 @@ new dependency — and the explicit "must never affect chat" and "must never
 become a runtime dependency" rules exist because this is the first
 dependency this constitution has approved that sits on the request path of
 every single `/chat` call without being one of the things that call
-actually needs to succeed.
+actually needs to succeed. The frontend stack is approved under the exact
+same discipline: TypeScript/React/Vite/React Router are what Feature 013's
+actual shell needs, narrowly, and the explicit not-approved list exists so
+"we already have a frontend" never becomes an unreviewed license to add
+arbitrary frontend infrastructure later.
 
 ## Separation of Concerns
 
@@ -477,6 +583,18 @@ and local/open-source embedding implementations SHOULD remain possible. Do
 not introduce provider abstractions beyond what is necessary for
 replaceability and testing.
 
+### Frontend application boundary (added by this amendment, Feature 013-admin-platform-shell)
+Browser-based Shiruno applications live under `apps/*` (the first being
+`apps/admin/`, the customer-facing Shiruno Admin Platform), entirely
+separate from the existing `src/shiruno/` Python/FastAPI backend. A
+frontend application MUST communicate with Shiruno exclusively through the
+existing authenticated REST API — it MUST NOT import backend Python code,
+reach the database directly, or otherwise bypass the API boundary. Adding
+a frontend application MUST NOT require restructuring or moving existing
+backend code; the two remain independent deployable units sharing only the
+REST contract between them (Principle XIV's Approved frontend stack,
+Principle II's Frontend is never a security boundary).
+
 ## MVP Scope Boundaries
 
 Mandatory now, from the first commit (never postponed):
@@ -516,6 +634,11 @@ Explicitly not built for the MVP (MUST NOT be speculatively implemented):
   boundary) — none of these are approved by the Feature 012 amendment;
   each remains a possible future, separately-justified addition, not part
   of the current approved stack.
+- Next.js, Redux, Zustand, GraphQL, Tailwind, Material UI, Chakra, shadcn,
+  Storybook, Nx, Turborepo, and any server-side-rendering framework
+  (Principle XIV's Approved frontend stack) — none of these are approved
+  by the Feature 013 amendment; each remains a possible future,
+  separately-justified addition, not part of the current approved stack.
 
 Explicitly deferrable (MUST be designed for or kept swappable, MAY be
 decided/implemented later):
@@ -552,6 +675,10 @@ decided/implemented later):
   is never required for `docker compose up`, any other normal development
   path, or any production path; running it is a deliberate, separate,
   opt-in operator action, not a default.
+- Production frontend hosting/deployment provider (Principle VII's
+  Frontend deployment neutrality) — a browser-based Shiruno application's
+  static build output must remain deployable to more than one host; the
+  actual choice is deferred, exactly like backend hosting.
 
 Anything not listed above as deferrable is a mandatory invariant and MUST
 NOT be postponed by a feature plan or task list.
@@ -600,7 +727,15 @@ affect `/api/v1/chat` — and MUST verify Principle IX's observability
 export-content defaults (no secrets, credentials, raw embedding vectors,
 hidden model reasoning, or full question/answer/document/prompt content
 exported unless a separate, explicit, off-by-default setting was
-deliberately enabled) are intact. Complexity that deviates from Principle
+deliberately enabled) are intact. A reviewer touching a browser-based
+Shiruno application (`apps/*`) MUST verify no client-controlled tenant
+identifier is ever sent on a request that selects tenant-scoped data
+(Principle II), that the authentication token is never written to
+`localStorage`/`sessionStorage`/a URL/frontend build configuration
+(Principle I), that any cross-origin configuration uses a narrow
+server-configured allow-list rather than a wildcard (Principle VIII), and
+that TypeScript type-checking, linting, and the production build all pass
+(Principle XI). Complexity that deviates from Principle
 XII (Engineering Quality), Principle XIII (Simplicity), or Principle XIV
 (Approved Technology Stack) MUST be explicitly justified in the PR
 description or plan, referencing the concrete requirement that demands it.
@@ -620,24 +755,32 @@ prior informal convention. Amendments are made by editing this file via the
 
 **Compliance review**: Every `/speckit-plan` and `/speckit-tasks` output for
 this project MUST be evaluated against these principles, with particular
-scrutiny on Principles I, II, III, V, VI, IX, X, and XI, since violations
-there (secrets exposure, tenant-isolation bypass, prompt-injection
-escalation, core logic coupled directly to a specific LLM/embedding/cloud
-SDK, uncontrolled cost exposure, missing access-control tests,
-observability data leaking sensitive content) are treated as critical
-severity. For Principle II (Multi-Tenant Isolation by Default)
-specifically, reviewers MUST verify that tenant context is always derived
-server-side, that every tenant-scoped query and mutation enforces
-isolation, that cross-tenant access fails closed, and that automated
-cross-tenant isolation tests exist for every tenant-owned resource — and
-MUST flag any code path that would let a client-supplied tenant identifier
-influence which tenant's data a request can reach. For Principle XIV's
-Observability boundary specifically, reviewers MUST flag any application/
-domain-layer import of a vendor-specific tracing SDK (Phoenix, Langfuse, or
-otherwise) in place of the OpenTelemetry API, and any code path where an
-application decision or the public chat response could differ depending on
-whether tracing is enabled or its backend is reachable. Any exception MUST
-be documented in the relevant plan's Complexity Tracking section with a
-concrete justification, not merely noted and left unresolved.
+scrutiny on Principles I, II, III, V, VI, VIII, IX, X, and XI, since
+violations there (secrets exposure, tenant-isolation bypass, prompt-
+injection escalation, core logic coupled directly to a specific
+LLM/embedding/cloud SDK, unsafe cross-origin browser access, uncontrolled
+cost exposure, missing access-control tests, observability data leaking
+sensitive content) are treated as critical severity. For Principle II
+(Multi-Tenant Isolation by Default) specifically, reviewers MUST verify
+that tenant context is always derived server-side, that every
+tenant-scoped query and mutation enforces isolation, that cross-tenant
+access fails closed, and that automated cross-tenant isolation tests exist
+for every tenant-owned resource — and MUST flag any code path that would
+let a client-supplied tenant identifier influence which tenant's data a
+request can reach, including from a browser-based Shiruno application
+(Principle II's Frontend is never a security boundary). For Principle I's
+Browser authentication paragraph specifically, reviewers MUST flag any
+code that persists an authentication token in `localStorage`,
+`sessionStorage`, a URL, or frontend build configuration. For Principle
+XIV's Observability boundary specifically, reviewers MUST flag any
+application/domain-layer import of a vendor-specific tracing SDK (Phoenix,
+Langfuse, or otherwise) in place of the OpenTelemetry API, and any code
+path where an application decision or the public chat response could
+differ depending on whether tracing is enabled or its backend is
+reachable. For Principle XIV's Approved frontend stack specifically,
+reviewers MUST flag the introduction of any frontend technology not on
+that list without an accompanying constitution amendment. Any exception
+MUST be documented in the relevant plan's Complexity Tracking section with
+a concrete justification, not merely noted and left unresolved.
 
-**Version**: 4.1.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-20
+**Version**: 4.2.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-20

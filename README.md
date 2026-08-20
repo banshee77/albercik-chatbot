@@ -246,6 +246,42 @@ No automated test ever calls the real Anthropic API or loads the real
 test injects deterministic fakes (`tests/fakes/`). Integration tests need
 a real PostgreSQL + `pgvector` instance (`docker compose up -d db-test`).
 
+## Admin frontend
+
+`apps/admin/` (feature 013-admin-platform-shell) is the Shiruno Admin
+Platform — a standalone React/TypeScript/Vite single-page app, independent
+of the backend above and run as its own process in local development.
+
+```bash
+# 1. Backend: allow the frontend's origin to call it cross-origin.
+#    In the root .env:
+#      CORS_ALLOWED_ORIGINS=http://localhost:5173
+docker compose up -d
+
+# 2. Frontend
+cd apps/admin
+cp .env.example .env   # first time only; VITE_SHIRUNO_API_URL=http://localhost:8000 by default
+npm install             # first time only
+npm run dev
+```
+
+Open the URL Vite prints (typically `http://localhost:5173`). The
+bearer token issued by `POST /api/v1/auth/login` is kept in memory only
+(never `localStorage`/`sessionStorage`) — a full page reload requires
+logging in again by design (research.md R1).
+
+```bash
+cd apps/admin
+npm test      # Vitest + Testing Library, no real backend/network
+npm run lint  # ESLint
+npx tsc -b    # type check (also run by `npm run build`)
+npm run build # production static build (dist/)
+```
+
+See [`specs/013-admin-platform-shell/quickstart.md`](specs/013-admin-platform-shell/quickstart.md)
+for a full manual walkthrough (login, organization identity, placeholder
+navigation, session expiration, logout).
+
 ## Known limitations
 
 This is an MVP, not a production deployment. Explicitly not solved yet:
@@ -386,6 +422,8 @@ product/customer boundary explanation and the aspirational target
 monorepo layout (`apps/`, `packages/`, `examples/`) this may grow toward.
 
 ```text
+apps/admin/                 # Shiruno Admin Platform frontend (React/TypeScript/Vite, feature 013) — independent of src/shiruno/
+
 src/shiruno/                # Shiruno Platform (reusable) + Albertos reference implementation
 ├── api/            # FastAPI routers, request/response schemas, error mapping   — platform
 ├── application/     # Use cases (ask_question, upload/list/delete document)      — platform
@@ -408,5 +446,6 @@ specs/005-public-club-website/                         # Albertos public website
 specs/006-public-chat-widget/                          # public chat widget
 specs/007-conversational-chat-ux/                      # small talk, assistant identity, avatar
 specs/008-shiruno-repository-architecture/             # this rebrand/architecture refactor
+specs/013-admin-platform-shell/                        # apps/admin/ — authenticated shell, placeholder nav
 tests/{unit,integration,contract,fakes,fixtures}/
 ```
