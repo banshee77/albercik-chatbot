@@ -35,6 +35,7 @@ path, since that's the only path that ever queries the database.
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -50,6 +51,14 @@ _BUDGET_WINDOW = timedelta(hours=1)
 @dataclass(frozen=True)
 class BudgetCheckResult:
     allowed: bool
+    # Feature 011-conversations-analytics (research.md §5): distinguishes
+    # *why* a request was declined, surfaced only to let a `ConversationRecord`
+    # record a safe failure category — never exposed as raw detail. `None`
+    # when `allowed=True`. A failed budget-check query (DB error) maps to
+    # "budget_exceeded" too — both mean "could not verify we're within
+    # budget, so we declined"; distinguishing a DB hiccup from real
+    # exhaustion has no operational value worth a third reason.
+    reason: Literal["kill_switch", "budget_exceeded"] | None = None
 
 
 def check_llm_budget(
@@ -61,7 +70,7 @@ def check_llm_budget(
     now: datetime | None = None,
 ) -> BudgetCheckResult:
     if not llm_enabled:
-        return BudgetCheckResult(allowed=False)
+        return BudgetCheckResult(allowed=False, reason="kill_switch")
 
     if ProviderName(llm_provider_name) != ProviderName.anthropic:
         return BudgetCheckResult(allowed=True)
@@ -78,6 +87,8 @@ def check_llm_budget(
         ).scalar_one()
     except Exception:
         logger.exception("LLM budget check failed; failing closed")
-        return BudgetCheckResult(allowed=False)
+        return BudgetCheckResult(allowed=False, reason="budget_exceeded")
 
-    return BudgetCheckResult(allowed=count < max_requests_per_hour)
+    if count < max_requests_per_hour:
+        return BudgetCheckResult(allowed=True)
+    return BudgetCheckResult(allowed=False, reason="budget_exceeded")

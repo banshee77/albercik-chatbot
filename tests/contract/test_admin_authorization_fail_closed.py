@@ -32,6 +32,11 @@ _ROUTES = [
         {"files": {"file": ("x.txt", b"tresc", "text/plain")}},
     ),
     ("POST", f"/api/v1/documents/{uuid.uuid4()}/reindex", {}),
+    ("GET", "/api/v1/admin/conversations", {}),
+    ("GET", f"/api/v1/admin/conversations/{uuid.uuid4()}", {}),
+    ("GET", "/api/v1/admin/analytics/summary", {}),
+    ("GET", "/api/v1/admin/analytics/knowledge-gaps", {}),
+    ("GET", "/api/v1/admin/analytics/questions", {}),
 ]
 
 
@@ -91,9 +96,10 @@ async def test_expired_token_fails_closed_identically(
     assert response.json() == _EXPECTED_BODY
 
 
-# --- Feature 010-knowledge-base-admin, T033: extend fail-closed coverage
-# (originally Feature 009's US4) to the four new routes, including the
-# deactivated-tenant case (FR-033, FR-034). ---
+# --- Feature 010-knowledge-base-admin, T033, and Feature
+# 011-conversations-analytics, T034: extend fail-closed coverage
+# (originally Feature 009's US4) to every new route, including the
+# deactivated-tenant case (FR-033, FR-034; feature 011 FR-034). ---
 
 
 @pytest.mark.asyncio

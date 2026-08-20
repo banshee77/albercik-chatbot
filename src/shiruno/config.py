@@ -196,6 +196,27 @@ class Settings(BaseSettings):
     # actually deployed behind N trusted reverse proxies.
     TRUSTED_PROXY_COUNT: int = 0
 
+    # --- Conversations & Analytics (feature 011-conversations-analytics,
+    # research.md §4, §7) ---
+
+    # The tenant every public /chat request's ConversationRecord is
+    # attributed to. Server configuration only — never client-supplied
+    # (constitution Principle II). Resolved fail-closed by
+    # application/resolve_public_tenant.py: must exist and be active, no
+    # fallback, no auto-creation.
+    PUBLIC_CHAT_TENANT_SLUG: str = "albertos"
+
+    # GET /admin/conversations pagination (research.md §7) — no existing
+    # pagination convention to match; a request for more than the maximum
+    # is clamped, never rejected.
+    CONVERSATION_LIST_DEFAULT_PAGE_SIZE: int = 20
+    CONVERSATION_LIST_MAX_PAGE_SIZE: int = 100
+
+    # Default lookback window applied by every analytics endpoint when no
+    # explicit start_date/end_date is supplied (research.md §7, spec.md
+    # Assumptions) — avoids scanning unlimited history by default.
+    ANALYTICS_DEFAULT_LOOKBACK_DAYS: int = 30
+
 
 @lru_cache
 def get_settings() -> Settings:

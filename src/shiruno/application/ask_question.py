@@ -35,6 +35,14 @@ this application before any provider call, which is both cheaper
 (Principle X) and structurally guarantees FR-028/FR-030 ("does not invent
 an answer" / "does not answer the underlying question") rather than
 relying on the model to follow that instruction.
+
+Feature 011-conversations-analytics (research.md §5) additionally surfaces
+`provider_name`/`provider_model`/`input_tokens`/`output_tokens`/
+`provider_metrics`/`failure_category` on `AskQuestionResult` — data this
+function already computes internally for `_record_usage()`/the budget
+check, now also returned so `record_conversation()` can snapshot it onto a
+`ConversationRecord`. No new decision logic: each field is populated with
+whatever is actually known at that return site, `None` otherwise.
 """
 
 import time
@@ -60,6 +68,7 @@ from shiruno.providers.llm.protocol import LLMProvider, LLMProviderError
 Outcome = Literal[
     "grounded", "insufficient_information", "out_of_scope", "unavailable", "small_talk"
 ]
+FailureCategory = Literal["provider_error", "budget_exceeded", "kill_switch", "concurrency_limit"]
 
 _OUT_OF_SCOPE_MESSAGE = (
     "Odpowiadam wyłącznie na pytania związane z Albertos. Nie mogę pomóc z tym pytaniem."
@@ -75,6 +84,16 @@ class AskQuestionResult:
     outcome: Outcome
     answer: str
     sources: list[SourceReference] = field(default_factory=list)
+    # Feature 011-conversations-analytics additions below — all optional,
+    # populated only when real data exists for this specific request
+    # (research.md §5). Never influences `outcome`/`answer`/`sources`
+    # above; purely additive surface area for conversation recording.
+    provider_name: str | None = None
+    provider_model: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    provider_metrics: dict[str, int] | None = None
+    failure_category: FailureCategory | None = None
 
 
 @dataclass(frozen=True)
@@ -156,12 +175,20 @@ def ask_question(
         max_requests_per_hour=safety.budget_max_llm_requests_per_hour,
     )
     if not budget_result.allowed:
-        return AskQuestionResult(outcome="unavailable", answer=_UNAVAILABLE_MESSAGE)
+        return AskQuestionResult(
+            outcome="unavailable",
+            answer=_UNAVAILABLE_MESSAGE,
+            failure_category=budget_result.reason,
+        )
 
     # --- concurrency guard (paid LLM calls) ---
     with concurrency_guard.try_acquire() as acquired:
         if not acquired:
-            return AskQuestionResult(outcome="unavailable", answer=_UNAVAILABLE_MESSAGE)
+            return AskQuestionResult(
+                outcome="unavailable",
+                answer=_UNAVAILABLE_MESSAGE,
+                failure_category="concurrency_limit",
+            )
 
         # --- small-talk short-circuit (feature 007; must run after every
         # safeguard above, unchanged, and before scope/retrieval/LLM) ---
@@ -179,6 +206,11 @@ def ask_question(
         embed_start = time.monotonic()
         query_embedding = embedding_provider.embed_query(question)
         embed_latency_ms = int((time.monotonic() - embed_start) * 1000)
+        # One row for this batched passage-embedding call (T065) —
+        # operational visibility only (Design Constraint 3): local
+        # embedding calls have no per-call provider cost and MUST NEVER be
+        # counted toward, or reduce, the LLM budget (infra/budget.py only
+        # ever queries provider_kind='llm' rows).
         _record_usage(
             session,
             request_id=request_id,
@@ -231,7 +263,13 @@ def ask_question(
                 success=False,
                 latency_ms=int((time.monotonic() - llm_start) * 1000),
             )
-            return AskQuestionResult(outcome="unavailable", answer=_UNAVAILABLE_MESSAGE)
+            return AskQuestionResult(
+                outcome="unavailable",
+                answer=_UNAVAILABLE_MESSAGE,
+                failure_category="provider_error",
+                provider_name=llm_provider_name,
+                provider_model=llm_model_name,
+            )
 
         # --- usage accounting ---
         _record_usage(
@@ -255,10 +293,29 @@ def ask_question(
             # response never reaches this branch at all, since the
             # provider raises `LLMProviderError` for that case instead
             # (handled above), never a `LLMResult(supported=False, ...)`.
+            #
+            # A real LLM call genuinely happened here (unlike the
+            # zero-chunk insufficient_information branch above), so real
+            # provider/token data exists — it is returned honestly rather
+            # than suppressed, since real cost was incurred either way
+            # (feature 011-conversations-analytics, research.md §5).
             return AskQuestionResult(
-                outcome="insufficient_information", answer=_INSUFFICIENT_INFORMATION_MESSAGE
+                outcome="insufficient_information",
+                answer=_INSUFFICIENT_INFORMATION_MESSAGE,
+                provider_name=llm_provider_name,
+                provider_model=result.model,
+                input_tokens=result.input_tokens,
+                output_tokens=result.output_tokens,
+                provider_metrics=result.provider_metrics,
             )
 
         return AskQuestionResult(
-            outcome="grounded", answer=result.answer, sources=extract_sources(limited_chunks)
+            outcome="grounded",
+            answer=result.answer,
+            sources=extract_sources(limited_chunks),
+            provider_name=llm_provider_name,
+            provider_model=result.model,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            provider_metrics=result.provider_metrics,
         )

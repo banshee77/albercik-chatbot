@@ -29,7 +29,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from shiruno.api.errors import register_exception_handlers
-from shiruno.api.routers import admin, auth, chat, documents, health
+from shiruno.api.routers import admin, analytics, auth, chat, conversations, documents, health
 from shiruno.config import Settings, get_settings
 from shiruno.infra.concurrency import ChatConcurrencyGuard
 from shiruno.infra.logging import configure_logging, get_logger
@@ -115,6 +115,8 @@ def create_app(
     app.include_router(auth.router)
     app.include_router(documents.router)
     app.include_router(admin.router)
+    app.include_router(conversations.router)
+    app.include_router(analytics.router)
 
     # Public, unauthenticated website (feature 005-public-club-website) —
     # purely additive: no existing route, contract, or behavior above this

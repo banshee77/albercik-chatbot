@@ -145,6 +145,13 @@ def test_upgrade_backfills_pre_existing_rows_and_downgrade_is_reversible(
         assert null_updated_at == 0
     engine.dispose()
 
+    # Feature 011-conversations-analytics chains one more migration after
+    # 7a4d6c1e8b2f — skip past it first so the two relative "-1" steps
+    # below still land exactly where this test (predates Feature 011)
+    # originally intended: reverting this feature's own two migrations
+    # one at a time.
+    command.downgrade(config, "7a4d6c1e8b2f")
+
     # Downgrade both migrations, in order, and confirm each step succeeds
     # and pre-existing data survives.
     command.downgrade(config, "-1")  # revert replaces_document_id

@@ -20,8 +20,17 @@ validation (which FastAPI also guarantees runs before this function's
 body) or, from rate limiting onward, in `ask_question.py` as strictly
 sequential imperative code — see that module's docstring for why
 independent `Depends()` cannot reproduce this pipeline's required order.
+
+Feature 011-conversations-analytics (research.md §3, §9): after
+`ask_question()` returns, this handler measures the end-to-end elapsed
+time and calls `record_conversation()`, wrapped in `try`/`except
+Exception` so a recording failure can never turn this otherwise-successful
+response into an error (FR-003) — the failure is logged with only
+`request_id` as context (FR-004, FR-038) and execution always falls
+through to building and returning `ChatResponse` below.
 """
 
+import time
 import uuid
 
 from fastapi import APIRouter, Depends, Request, Response, status
@@ -37,12 +46,16 @@ from shiruno.api.deps import (
 )
 from shiruno.api.schemas import ChatRequest, ChatResponse, SourceReferenceOut
 from shiruno.application.ask_question import ChatSafetyConfig, ask_question
+from shiruno.application.record_conversation import record_conversation
 from shiruno.config import get_settings
 from shiruno.infra.concurrency import ChatConcurrencyGuard
+from shiruno.infra.logging import get_logger
 from shiruno.infra.rate_limit import resolve_client_ip
 from shiruno.persistence.database import get_session
 from shiruno.providers.embedding.protocol import EmbeddingProvider
 from shiruno.providers.llm.protocol import LLMProvider
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["chat"])
 
@@ -70,6 +83,7 @@ def post_chat(
         max_context_chars=settings.MAX_CONTEXT_CHARS,
     )
     request_id = uuid.uuid4()
+    request_start = time.monotonic()
     result = ask_question(
         payload.question,
         session=session,
@@ -86,6 +100,20 @@ def post_chat(
         concurrency_guard=concurrency_guard,
         request_id=request_id,
     )
+    latency_ms = int((time.monotonic() - request_start) * 1000)
+
+    try:
+        record_conversation(
+            session=session,
+            tenant_slug=settings.PUBLIC_CHAT_TENANT_SLUG,
+            request_id=request_id,
+            question=payload.question,
+            result=result,
+            latency_ms=latency_ms,
+        )
+    except Exception:
+        logger.exception("Conversation recording failed", extra={"request_id": str(request_id)})
+
     if result.outcome == "unavailable":
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return ChatResponse(

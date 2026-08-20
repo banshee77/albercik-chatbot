@@ -1,9 +1,11 @@
 """ORM models — data-model.md.
 
 Multi-tenant per constitution Principle II (amended 2026-08-19, v4.0.0):
-`Tenant` is a first-class security boundary. `Administrator` and
-`KnowledgeDocument` carry a required `tenant_id` FK — see feature
-009-admin-platform-foundation's data-model.md. `DocumentChunk`,
+`Tenant` is a first-class security boundary. `Administrator`,
+`KnowledgeDocument`, and `ConversationRecord` (feature
+011-conversations-analytics) carry a required `tenant_id` FK — see feature
+009-admin-platform-foundation's data-model.md and feature
+011-conversations-analytics's data-model.md. `DocumentChunk`,
 `UsageRecord`, and `RateLimitWindow` remain tenant-unaware (Principle II
 Rule 10 — not retroactively tenant-owned; neither has an admin-facing
 per-tenant view today).
@@ -214,6 +216,89 @@ class UsageRecord(Base):
     # exactly once, opaquely, by `_record_usage()` — no other layer reads
     # or branches on its keys (research.md §8).
     provider_metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ConversationOutcome(enum.StrEnum):
+    """Mirrors `application.ask_question.Outcome` exactly (feature
+    011-conversations-analytics, data-model.md)."""
+
+    grounded = "grounded"
+    insufficient_information = "insufficient_information"
+    out_of_scope = "out_of_scope"
+    unavailable = "unavailable"
+    small_talk = "small_talk"
+
+
+class FailureCategory(enum.StrEnum):
+    """Only set when `ConversationRecord.outcome == unavailable`
+    (research.md §5) — distinguishes *why* the assistant was unavailable
+    without ever exposing raw provider exception detail."""
+
+    provider_error = "provider_error"
+    budget_exceeded = "budget_exceeded"
+    kill_switch = "kill_switch"
+    concurrency_limit = "concurrency_limit"
+
+
+class ConversationRecord(Base):
+    """A durable, tenant-owned record of one public chat request that
+    reached one of the five outcomes above (feature
+    011-conversations-analytics, data-model.md). Every operational field
+    below is an immutable, at-write-time snapshot (research.md §2a) —
+    never recomputed from current `KnowledgeDocument` state or current
+    provider configuration, and never updated after creation.
+    """
+
+    __tablename__ = "conversation_records"
+    __table_args__ = (
+        Index("ix_conversation_records_tenant_id_created_at", "tenant_id", "created_at"),
+        Index(
+            "ix_conversation_records_tenant_id_outcome_created_at",
+            "tenant_id",
+            "outcome",
+            "created_at",
+        ),
+        Index(
+            "ix_conversation_records_tenant_id_normalized_question",
+            "tenant_id",
+            "normalized_question",
+        ),
+        UniqueConstraint("request_id", name="uq_conversation_records_request_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("tenants.id"), nullable=False)
+    request_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    normalized_question: Mapped[str] = mapped_column(Text, nullable=False)
+    outcome: Mapped[ConversationOutcome] = mapped_column(
+        Enum(
+            ConversationOutcome,
+            name="conversation_outcome",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+    )
+    answer: Mapped[str] = mapped_column(Text, nullable=False)
+    sources: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)
+    safe_failure_category: Mapped[FailureCategory | None] = mapped_column(
+        Enum(
+            FailureCategory,
+            name="conversation_failure_category",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=True,
+    )
+    provider_name: Mapped[ProviderName | None] = mapped_column(
+        Enum(ProviderName, name="provider_name", values_callable=lambda e: [m.value for m in e]),
+        nullable=True,
+    )
+    provider_model: Mapped[str | None] = mapped_column(String, nullable=True)
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    provider_metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
