@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from shiruno.domain.retrieval import RetrievedChunk
-from shiruno.persistence.models import DocumentChunk, KnowledgeDocument
+from shiruno.persistence.models import DocumentChunk, DocumentStatus, KnowledgeDocument
 
 
 def search_similar_chunks(
@@ -28,7 +28,10 @@ def search_similar_chunks(
     stmt = (
         select(DocumentChunk, KnowledgeDocument, distance.label("distance"))
         .join(KnowledgeDocument, DocumentChunk.document_id == KnowledgeDocument.id)
-        .where(KnowledgeDocument.deleted_at.is_(None))
+        .where(
+            KnowledgeDocument.deleted_at.is_(None),
+            KnowledgeDocument.status == DocumentStatus.ready,
+        )
         .order_by(distance)
         .limit(top_k)
     )

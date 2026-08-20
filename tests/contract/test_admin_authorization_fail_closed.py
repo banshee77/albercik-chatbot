@@ -10,7 +10,8 @@ import pytest
 
 from shiruno.config import get_settings
 from shiruno.infra.security import hash_password, issue_access_token
-from shiruno.persistence.models import Administrator
+from shiruno.persistence.models import Administrator, TenantStatus
+from tests.fixtures.admin import seed_admin_and_token
 
 _EXPECTED_STATUS = 401
 # api/deps.py::_GENERIC_AUTH_FAILURE — the actual message every
@@ -23,6 +24,14 @@ _ROUTES = [
     ("POST", "/api/v1/documents", {"files": {"file": ("x.txt", b"tresc", "text/plain")}}),
     ("GET", "/api/v1/documents", {}),
     ("DELETE", f"/api/v1/documents/{uuid.uuid4()}", {}),
+    ("GET", "/api/v1/documents/health", {}),
+    ("GET", f"/api/v1/documents/{uuid.uuid4()}", {}),
+    (
+        "POST",
+        f"/api/v1/documents/{uuid.uuid4()}/replace",
+        {"files": {"file": ("x.txt", b"tresc", "text/plain")}},
+    ),
+    ("POST", f"/api/v1/documents/{uuid.uuid4()}/reindex", {}),
 ]
 
 
@@ -76,6 +85,30 @@ async def test_expired_token_fails_closed_identically(
 
     response = await db_async_client.request(
         method, path, headers={"authorization": f"Bearer {expired_token}"}, **kwargs
+    )
+
+    assert response.status_code == _EXPECTED_STATUS
+    assert response.json() == _EXPECTED_BODY
+
+
+# --- Feature 010-knowledge-base-admin, T033: extend fail-closed coverage
+# (originally Feature 009's US4) to the four new routes, including the
+# deactivated-tenant case (FR-033, FR-034). ---
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("method,path,kwargs", _ROUTES)
+async def test_deactivated_tenant_fails_closed_identically(
+    db_async_client, db_session, default_tenant, method, path, kwargs
+) -> None:
+    token = seed_admin_and_token(
+        db_session, tenant_id=default_tenant.id, username=f"fail-closed-tenant-{uuid.uuid4()}"
+    )
+    default_tenant.status = TenantStatus.inactive
+    db_session.flush()
+
+    response = await db_async_client.request(
+        method, path, headers={"authorization": f"Bearer {token}"}, **kwargs
     )
 
     assert response.status_code == _EXPECTED_STATUS

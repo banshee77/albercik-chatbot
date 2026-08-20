@@ -60,6 +60,11 @@ class NotFoundAppError(AppError):
     safe_detail = "Not found."
 
 
+class ConflictError(AppError):
+    status_code = status.HTTP_409_CONFLICT
+    safe_detail = "The request conflicts with the current state of the resource."
+
+
 class PayloadTooLargeError(AppError):
     status_code = status.HTTP_413_CONTENT_TOO_LARGE
     safe_detail = "Request exceeds the configured maximum size."

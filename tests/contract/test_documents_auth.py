@@ -254,3 +254,118 @@ async def test_deactivated_tenant_denies_document_access(
     assert list_response.status_code == 401
     assert upload_response.status_code == 401
     assert delete_response.status_code == 401
+
+
+# --- Feature 010-knowledge-base-admin, User Story 6: cross-tenant
+# isolation on detail, health, replace, and re-index (FR-031, FR-032,
+# spec Testing Requirements #14, #16, #18, #20). ---
+
+
+@pytest.mark.asyncio
+async def test_foreign_tenant_cannot_view_replace_or_reindex_document(
+    db_async_client, db_session, default_tenant
+) -> None:
+    other_tenant = seed_tenant(db_session)
+    owner_token = seed_admin_and_token(db_session, tenant_id=default_tenant.id, username="owner-b")
+    attacker_token = seed_admin_and_token(
+        db_session, tenant_id=other_tenant.id, username="attacker-b"
+    )
+
+    upload_response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("owner.txt", b"Tresc wlasciciela.", "text/plain")},
+        headers={"authorization": f"Bearer {owner_token}"},
+    )
+    document_id = upload_response.json()["id"]
+    attacker_headers = {"authorization": f"Bearer {attacker_token}"}
+
+    detail_response = await db_async_client.get(
+        f"/api/v1/documents/{document_id}", headers=attacker_headers
+    )
+    replace_response = await db_async_client.post(
+        f"/api/v1/documents/{document_id}/replace",
+        files={"file": ("x.txt", b"tresc", "text/plain")},
+        headers=attacker_headers,
+    )
+    reindex_response = await db_async_client.post(
+        f"/api/v1/documents/{document_id}/reindex", headers=attacker_headers
+    )
+
+    assert detail_response.status_code == 404
+    assert replace_response.status_code == 404
+    assert reindex_response.status_code == 404
+
+    owner_detail = await db_async_client.get(
+        f"/api/v1/documents/{document_id}", headers={"authorization": f"Bearer {owner_token}"}
+    )
+    assert owner_detail.status_code == 200
+    assert owner_detail.json()["status"] == "ready"
+
+
+@pytest.mark.asyncio
+async def test_health_summary_never_reflects_another_tenants_data(
+    db_async_client, db_session, default_tenant
+) -> None:
+    other_tenant = seed_tenant(db_session)
+    own_token = seed_admin_and_token(db_session, tenant_id=default_tenant.id, username="own-h")
+    other_token = seed_admin_and_token(db_session, tenant_id=other_tenant.id, username="other-h")
+
+    await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("own.txt", b"Tresc wlasna.", "text/plain")},
+        headers={"authorization": f"Bearer {own_token}"},
+    )
+
+    own_health = await db_async_client.get(
+        "/api/v1/documents/health", headers={"authorization": f"Bearer {own_token}"}
+    )
+    other_health = await db_async_client.get(
+        "/api/v1/documents/health", headers={"authorization": f"Bearer {other_token}"}
+    )
+
+    assert own_health.json()["documents"]["total"] == 1
+    assert other_health.json()["documents"] == {
+        "total": 0,
+        "ready": 0,
+        "processing": 0,
+        "failed": 0,
+    }
+
+
+@pytest.mark.asyncio
+async def test_client_supplied_tenant_identifier_has_no_effect_on_new_routes(
+    db_async_client, db_session, default_tenant
+) -> None:
+    other_tenant = seed_tenant(db_session)
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id, username="no-override-b")
+    headers = {"authorization": f"Bearer {token}", "X-Tenant-Id": str(other_tenant.id)}
+
+    upload_response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("own.txt", b"Tresc wlasna.", "text/plain")},
+        headers={"authorization": f"Bearer {token}"},
+    )
+    document_id = upload_response.json()["id"]
+
+    detail_response = await db_async_client.get(f"/api/v1/documents/{document_id}", headers=headers)
+    health_response = await db_async_client.get("/api/v1/documents/health", headers=headers)
+    replace_response = await db_async_client.post(
+        f"/api/v1/documents/{document_id}/replace",
+        files={"file": ("new.txt", b"Nowa tresc.", "text/plain")},
+        data={"tenant_id": str(other_tenant.id)},
+        headers=headers,
+    )
+    reindex_response = await db_async_client.post(
+        f"/api/v1/documents/{document_id}/reindex"
+        if replace_response.status_code != 201
+        else f"/api/v1/documents/{replace_response.json()['id']}/reindex",
+        headers=headers,
+    )
+
+    assert detail_response.status_code == 200
+    assert health_response.status_code == 200
+    assert replace_response.status_code == 201
+    successor = db_session.get(KnowledgeDocument, uuid.UUID(replace_response.json()["id"]))
+    assert successor.tenant_id == default_tenant.id
+    assert successor.tenant_id != other_tenant.id
+    assert reindex_response.status_code == 200

@@ -132,6 +132,14 @@ class KnowledgeDocument(Base):
         default=DocumentStatus.processing,
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    safe_error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    replaces_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("knowledge_documents.id"), nullable=True
+    )
 
     chunks: Mapped[list[DocumentChunk]] = relationship(
         back_populates="document", cascade="all, delete-orphan"

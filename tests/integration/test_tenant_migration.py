@@ -143,6 +143,12 @@ def test_upgrade_bootstraps_albertos_and_downgrade_is_reversible(
         assert null_document_tenants == 0
     engine.dispose()
 
+    # Feature 010-knowledge-base-admin chains two more migrations after
+    # e3406f01e5ec — skip past those first so the two relative "-1" steps
+    # below still land exactly where this test (predates Feature 010)
+    # originally intended: reverting the tenant migrations one at a time.
+    command.downgrade(config, "e3406f01e5ec")
+
     # Downgrade both migrations, in order, and confirm each step succeeds.
     command.downgrade(config, "-1")  # revert knowledge_documents.tenant_id
     engine = create_engine(migration_database_url)

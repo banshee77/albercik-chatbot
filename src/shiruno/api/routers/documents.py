@@ -1,10 +1,15 @@
-"""POST/GET /api/v1/documents, DELETE /api/v1/documents/{document_id} —
-User Story 2 (T052). Every route depends on
-`api.deps.get_current_administrator` (FR-003, FR-004, FR-007) — FastAPI
-resolves that dependency before any route body runs, so an unauthenticated
-or invalid-token request never reaches upload/list/delete logic at all,
-and no knowledge-base state changes as a side effect of a rejected
-request (SC-004).
+"""`/api/v1/documents` — list/upload/detail/health/replace/reindex/delete
+(User Story 2, feature 009-admin-platform-foundation; feature
+010-knowledge-base-admin). Every route depends on
+`api.deps.get_current_administrator` + `get_current_tenant` (FR-003,
+FR-004, FR-007, FR-031) — FastAPI resolves those dependencies before any
+route body runs, so an unauthenticated, invalid, or cross-tenant request
+never reaches application-layer logic at all, and no knowledge-base state
+changes as a side effect of a rejected request (SC-004).
+
+`GET /documents/health` is registered before `GET /documents/{document_id}`
+(research.md §2) — a literal `/health` path would otherwise be captured by
+the `{document_id}` pattern and fail UUID coercion (422) first.
 """
 
 import uuid
@@ -14,9 +19,13 @@ from sqlalchemy.orm import Session
 
 from shiruno.api.deps import get_current_administrator, get_current_tenant, get_embedding_provider
 from shiruno.api.errors import NotFoundAppError, PayloadTooLargeError
-from shiruno.api.schemas import DocumentSummary
+from shiruno.api.schemas import DocumentCountsOut, DocumentSummary, KnowledgeHealthResponse
 from shiruno.application.delete_document import delete_document
+from shiruno.application.get_document import get_document
+from shiruno.application.knowledge_health import get_knowledge_health
 from shiruno.application.list_documents import list_documents
+from shiruno.application.reindex_document import reindex_document
+from shiruno.application.replace_document import replace_document
 from shiruno.application.upload_document import upload_document
 from shiruno.config import get_settings
 from shiruno.infra.audit import log_audit_event
@@ -30,6 +39,11 @@ router = APIRouter(prefix="/api/v1", tags=["documents"])
 # knob — an internal implementation detail of how bounded reading works,
 # not a product-level threshold (that's MAX_UPLOAD_SIZE_BYTES).
 _UPLOAD_READ_CHUNK_BYTES = 64 * 1024
+
+# The system only accepts `.txt` uploads today (research.md §6) — a
+# constant computed at the response layer, not a persisted column, since a
+# column with exactly one possible value is speculative.
+_CONTENT_TYPE = "text/plain"
 
 
 async def _read_upload_bounded(file: UploadFile, *, max_size_bytes: int) -> bytes:
@@ -66,8 +80,12 @@ def _to_summary(document: KnowledgeDocument) -> DocumentSummary:
     return DocumentSummary(
         id=document.id,
         filename=document.original_filename,
+        content_type=_CONTENT_TYPE,
         status=document.status.value,
         uploaded_at=document.uploaded_at,
+        updated_at=document.updated_at,
+        indexed_at=document.indexed_at,
+        error_message=document.safe_error_message,
     )
 
 
@@ -111,6 +129,117 @@ def get_documents(
 ) -> list[DocumentSummary]:
     documents = list_documents(session, tenant_id=current_tenant.id)
     return [_to_summary(document) for document in documents]
+
+
+@router.get("/documents/health", response_model=KnowledgeHealthResponse)
+def get_documents_health(
+    session: Session = Depends(get_session),
+    current_admin: Administrator = Depends(get_current_administrator),
+    current_tenant: Tenant = Depends(get_current_tenant),
+) -> KnowledgeHealthResponse:
+    health = get_knowledge_health(session, tenant_id=current_tenant.id)
+    return KnowledgeHealthResponse(
+        documents=DocumentCountsOut(
+            total=health.total,
+            ready=health.ready,
+            processing=health.processing,
+            failed=health.failed,
+        ),
+        chunks=health.chunks,
+        ready_for_chat=health.ready_for_chat,
+        last_indexed_at=health.last_indexed_at,
+    )
+
+
+@router.get("/documents/{document_id}", response_model=DocumentSummary)
+def get_document_route(
+    document_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    current_admin: Administrator = Depends(get_current_administrator),
+    current_tenant: Tenant = Depends(get_current_tenant),
+) -> DocumentSummary:
+    document = get_document(document_id, session=session, tenant_id=current_tenant.id)
+    return _to_summary(document)
+
+
+@router.post("/documents/{document_id}/replace", response_model=DocumentSummary, status_code=201)
+async def post_document_replace(
+    document_id: uuid.UUID,
+    file: UploadFile,
+    session: Session = Depends(get_session),
+    embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
+    current_admin: Administrator = Depends(get_current_administrator),
+    current_tenant: Tenant = Depends(get_current_tenant),
+) -> DocumentSummary:
+    settings = get_settings()
+    content_bytes = await _read_upload_bounded(file, max_size_bytes=settings.MAX_UPLOAD_SIZE_BYTES)
+    try:
+        successor = replace_document(
+            document_id,
+            filename=file.filename or "upload.txt",
+            content_bytes=content_bytes,
+            session=session,
+            embedding_provider=embedding_provider,
+            uploaded_by=current_admin,
+            tenant_id=current_tenant.id,
+            max_upload_size_bytes=settings.MAX_UPLOAD_SIZE_BYTES,
+            chunk_size_chars=settings.CHUNK_SIZE_CHARS,
+            chunk_overlap_chars=settings.CHUNK_OVERLAP_CHARS,
+            embedding_model_name=settings.EMBEDDING_MODEL_NAME,
+        )
+    except NotFoundAppError:
+        log_audit_event(
+            "document_replace",
+            outcome="not_found",
+            administrator_id=current_admin.id,
+            document_id=document_id,
+            tenant_id=current_tenant.id,
+        )
+        raise
+    log_audit_event(
+        "document_replace",
+        outcome="success" if successor.status == DocumentStatus.ready else "failure",
+        administrator_id=current_admin.id,
+        document_id=document_id,
+        tenant_id=current_tenant.id,
+    )
+    return _to_summary(successor)
+
+
+@router.post("/documents/{document_id}/reindex", response_model=DocumentSummary)
+def post_document_reindex(
+    document_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
+    current_admin: Administrator = Depends(get_current_administrator),
+    current_tenant: Tenant = Depends(get_current_tenant),
+) -> DocumentSummary:
+    settings = get_settings()
+    try:
+        document = reindex_document(
+            document_id,
+            session=session,
+            embedding_provider=embedding_provider,
+            tenant_id=current_tenant.id,
+            embedding_model_name=settings.EMBEDDING_MODEL_NAME,
+        )
+    except NotFoundAppError:
+        log_audit_event(
+            "document_reindex",
+            outcome="not_found",
+            administrator_id=current_admin.id,
+            document_id=document_id,
+            tenant_id=current_tenant.id,
+        )
+        raise
+    log_audit_event(
+        "document_reindex",
+        outcome="success" if document.safe_error_message is None else "failure",
+        administrator_id=current_admin.id,
+        document_id=document_id,
+        tenant_id=current_tenant.id,
+    )
+    return _to_summary(document)
 
 
 @router.delete("/documents/{document_id}", status_code=204)

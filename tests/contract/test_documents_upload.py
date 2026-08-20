@@ -159,6 +159,70 @@ async def test_valid_file_larger_than_one_read_chunk_still_uploads(
 
 
 @pytest.mark.asyncio
+async def test_successful_upload_response_includes_new_lifecycle_fields(
+    db_async_client, db_session, default_tenant
+) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
+
+    response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("godziny.txt", b"Albertos jest czynny od 9 do 17.", "text/plain")},
+        headers={"authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["content_type"] == "text/plain"
+    assert body["updated_at"] is not None
+    assert body["indexed_at"] is not None
+    assert body["error_message"] is None
+
+
+@pytest.mark.asyncio
+async def test_failed_upload_never_leaks_raw_exception_detail_and_never_becomes_retrievable(
+    db_async_client, db_session, default_tenant, fake_embedding_provider
+) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
+    unsafe_exception = Exception(
+        "Traceback (most recent call last): ... ConnectionError to "
+        "http://embedding-internal.example:9999 using key sk-test-do-not-leak-12345"
+    )
+    fake_embedding_provider.error = unsafe_exception
+
+    response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("bad.txt", b"Tresc, ktora nie zostanie zaindeksowana.", "text/plain")},
+        headers={"authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "failed"
+    assert body["error_message"] is not None
+    assert body["error_message"] != ""
+    response_text = response.text
+    assert "Traceback" not in response_text
+    assert "embedding-internal.example" not in response_text
+    assert "sk-test-do-not-leak-12345" not in response_text
+
+    chunk_count = db_session.execute(
+        select(func.count())
+        .select_from(DocumentChunk)
+        .where(DocumentChunk.document_id == uuid.UUID(body["id"]))
+    ).scalar_one()
+    assert chunk_count == 0
+
+    # Chat about this content must never claim to know it (the embedding
+    # error must not leak into the chat call either — reset it first).
+    fake_embedding_provider.error = None
+    chat_response = await db_async_client.post(
+        "/api/v1/chat", json={"question": "Co jest w tresci, ktora nie zostanie zaindeksowana?"}
+    )
+    assert chat_response.status_code == 200
+    assert chat_response.json()["outcome"] == "insufficient_information"
+
+
+@pytest.mark.asyncio
 async def test_path_traversal_style_filename_is_accepted_and_stored_safely(
     db_async_client, db_session, default_tenant
 ) -> None:

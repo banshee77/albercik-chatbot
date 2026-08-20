@@ -68,6 +68,42 @@ async def test_document_upload_and_delete_are_audit_logged(
 
 
 @pytest.mark.asyncio
+async def test_document_replace_and_reindex_are_audit_logged(
+    db_async_client, db_session, default_tenant, caplog
+) -> None:
+    token = seed_admin_and_token(db_session, tenant_id=default_tenant.id)
+    headers = {"authorization": f"Bearer {token}"}
+
+    upload_response = await db_async_client.post(
+        "/api/v1/documents",
+        files={"file": ("godziny.txt", b"Albertos jest czynny od 9 do 17.", "text/plain")},
+        headers=headers,
+    )
+    predecessor_id = upload_response.json()["id"]
+
+    with caplog.at_level(logging.INFO, logger="shiruno.audit"):
+        replace_response = await db_async_client.post(
+            f"/api/v1/documents/{predecessor_id}/replace",
+            files={"file": ("nowe.txt", b"Albertos jest czynny od 8 do 20.", "text/plain")},
+            headers=headers,
+        )
+        successor_id = replace_response.json()["id"]
+        reindex_response = await db_async_client.post(
+            f"/api/v1/documents/{successor_id}/reindex", headers=headers
+        )
+
+    assert replace_response.status_code == 201
+    assert reindex_response.status_code == 200
+    messages = [r.message for r in caplog.records if r.name == "shiruno.audit"]
+    tenant_id = str(default_tenant.id)
+    assert any("document_replace" in m and predecessor_id in m and tenant_id in m for m in messages)
+    assert any("document_reindex" in m and successor_id in m and tenant_id in m for m in messages)
+    for message in messages:
+        assert "Albertos jest czynny" not in message
+        assert token not in message
+
+
+@pytest.mark.asyncio
 async def test_audit_log_never_contains_the_password(
     db_async_client, db_session, default_tenant, caplog
 ) -> None:

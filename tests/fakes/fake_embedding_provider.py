@@ -34,12 +34,17 @@ def _deterministic_vector(text: str) -> list[float]:
 
 
 class FakeEmbeddingProvider:
-    def __init__(self) -> None:
+    def __init__(self, *, error: Exception | None = None) -> None:
         self.embed_calls: list[str] = []
+        self.error = error
 
     def embed_query(self, text: str) -> list[float]:
+        if self.error is not None:
+            raise self.error
         self.embed_calls.append(text)
         return _deterministic_vector(text)
 
     def embed_passages(self, texts: Sequence[str]) -> list[list[float]]:
+        if self.error is not None:
+            raise self.error
         return [self.embed_query(text) for text in texts]

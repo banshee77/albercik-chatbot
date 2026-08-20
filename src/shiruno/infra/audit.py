@@ -22,7 +22,14 @@ from shiruno.infra.logging import get_logger
 
 _audit_logger = get_logger("shiruno.audit")
 
-AuditAction = Literal["login_success", "login_failure", "document_upload", "document_delete"]
+AuditAction = Literal[
+    "login_success",
+    "login_failure",
+    "document_upload",
+    "document_delete",
+    "document_replace",
+    "document_reindex",
+]
 AuditOutcome = Literal["success", "failure", "not_found"]
 
 

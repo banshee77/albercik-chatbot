@@ -69,8 +69,26 @@ class LoginResponse(BaseModel):
 class DocumentSummary(BaseModel):
     id: uuid.UUID
     filename: str
+    content_type: str
     status: Literal["processing", "ready", "failed"]
     uploaded_at: datetime
+    updated_at: datetime
+    indexed_at: datetime | None
+    error_message: str | None
+
+
+class DocumentCountsOut(BaseModel):
+    total: int
+    ready: int
+    processing: int
+    failed: int
+
+
+class KnowledgeHealthResponse(BaseModel):
+    documents: DocumentCountsOut
+    chunks: int
+    ready_for_chat: bool
+    last_indexed_at: datetime | None
 
 
 class AdministratorOut(BaseModel):
