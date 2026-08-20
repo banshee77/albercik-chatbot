@@ -46,6 +46,11 @@ def test_cors_middleware_allows_only_configured_origins(monkeypatch) -> None:
     assert middleware is not None
     assert middleware.kwargs["allow_origins"] == ["http://localhost:5173"]
     assert middleware.kwargs["allow_origins"] != ["*"]
+    # GET/POST (auth, upload, replace, re-index) and DELETE (feature
+    # 014-knowledge-base-ui) must all be allowed, or the browser's
+    # preflight silently blocks that method before it ever reaches a
+    # route — a real regression this project has already hit once.
+    assert set(middleware.kwargs["allow_methods"]) >= {"GET", "POST", "DELETE"}
 
 
 def test_cors_middleware_never_wildcard_with_multiple_origins(monkeypatch) -> None:

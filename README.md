@@ -251,6 +251,10 @@ a real PostgreSQL + `pgvector` instance (`docker compose up -d db-test`).
 `apps/admin/` (feature 013-admin-platform-shell) is the Shiruno Admin
 Platform — a standalone React/TypeScript/Vite single-page app, independent
 of the backend above and run as its own process in local development.
+`/app/knowledge` (feature 014-knowledge-base-ui) is a functional
+knowledge-management screen — health summary, document list, upload,
+detail, re-index, replace, and delete — consuming the existing Feature 010
+Knowledge API with zero backend changes.
 
 ```bash
 # 1. Backend: allow the frontend's origin to call it cross-origin.
@@ -447,5 +451,6 @@ specs/006-public-chat-widget/                          # public chat widget
 specs/007-conversational-chat-ux/                      # small talk, assistant identity, avatar
 specs/008-shiruno-repository-architecture/             # this rebrand/architecture refactor
 specs/013-admin-platform-shell/                        # apps/admin/ — authenticated shell, placeholder nav
+specs/014-knowledge-base-ui/                           # /app/knowledge — functional knowledge management
 tests/{unit,integration,contract,fakes,fixtures}/
 ```

@@ -4,21 +4,34 @@ import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as adminApi from '../src/api/admin'
 import * as authApi from '../src/api/auth'
+import * as knowledgeApi from '../src/api/knowledge'
 import { AuthContext } from '../src/auth/AuthContext'
 import { ProtectedLayout } from '../src/routes/ProtectedLayout'
 import { renderApp } from './testUtils'
 
 vi.mock('../src/api/auth')
 vi.mock('../src/api/admin')
+vi.mock('../src/api/knowledge')
 
 const mockedLogin = vi.mocked(authApi.login)
 const mockedGetMe = vi.mocked(adminApi.getMe)
+const mockedListDocuments = vi.mocked(knowledgeApi.listDocuments)
+const mockedGetKnowledgeHealth = vi.mocked(knowledgeApi.getKnowledgeHealth)
 
 const PROTECTED_PATHS = ['/app', '/app/knowledge', '/app/conversations', '/app/analytics']
 
 beforeEach(() => {
   mockedLogin.mockReset()
   mockedGetMe.mockReset()
+  mockedListDocuments.mockReset()
+  mockedGetKnowledgeHealth.mockReset()
+  mockedListDocuments.mockResolvedValue([])
+  mockedGetKnowledgeHealth.mockResolvedValue({
+    documents: { total: 0, ready: 0, processing: 0, failed: 0 },
+    chunks: 0,
+    ready_for_chat: false,
+    last_indexed_at: null,
+  })
 })
 
 describe('route protection', () => {

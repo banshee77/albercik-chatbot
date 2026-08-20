@@ -94,7 +94,9 @@ def create_app(
             CORSMiddleware,
             allow_origins=allowed_origins,
             allow_credentials=False,
-            allow_methods=["GET", "POST"],
+            # DELETE added by feature 014-knowledge-base-ui (document
+            # delete) — additive, tenant-safe, no other method widened.
+            allow_methods=["GET", "POST", "DELETE"],
             allow_headers=["Authorization", "Content-Type"],
         )
 

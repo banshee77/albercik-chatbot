@@ -39,7 +39,12 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   const hadToken = authToken !== null
 
   const headers = new Headers(init.headers)
-  headers.set('Content-Type', 'application/json')
+  // A FormData body (file upload/replace) needs the browser to set its own
+  // multipart/form-data boundary — setting Content-Type manually here would
+  // break that boundary and the backend's UploadFile parsing.
+  if (!(init.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json')
+  }
   if (authToken) {
     headers.set('Authorization', `Bearer ${authToken}`)
   }
@@ -65,6 +70,11 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     }
     const error: ApiError = { message, status: response.status }
     throw error
+  }
+
+  // A 204 (e.g. DELETE) has no body — calling response.json() on it throws.
+  if (response.status === 204) {
+    return undefined as T
   }
 
   return (await response.json()) as T

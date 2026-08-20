@@ -3,21 +3,34 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as adminApi from '../src/api/admin'
 import * as authApi from '../src/api/auth'
+import * as knowledgeApi from '../src/api/knowledge'
 import { renderApp } from './testUtils'
 
 vi.mock('../src/api/auth')
 vi.mock('../src/api/admin')
+vi.mock('../src/api/knowledge')
 
 const mockedLogin = vi.mocked(authApi.login)
 const mockedGetMe = vi.mocked(adminApi.getMe)
+const mockedListDocuments = vi.mocked(knowledgeApi.listDocuments)
+const mockedGetKnowledgeHealth = vi.mocked(knowledgeApi.getKnowledgeHealth)
 
 beforeEach(() => {
   mockedLogin.mockReset()
   mockedGetMe.mockReset()
+  mockedListDocuments.mockReset()
+  mockedGetKnowledgeHealth.mockReset()
   mockedLogin.mockResolvedValue({ access_token: 'token', token_type: 'bearer', expires_in: 3600 })
   mockedGetMe.mockResolvedValue({
     administrator: { id: 'admin-1', username: 'alice' },
     tenant: { id: 'tenant-1', name: 'Quickstart Co', slug: 'quickstart' },
+  })
+  mockedListDocuments.mockResolvedValue([])
+  mockedGetKnowledgeHealth.mockResolvedValue({
+    documents: { total: 0, ready: 0, processing: 0, failed: 0 },
+    chunks: 0,
+    ready_for_chat: false,
+    last_indexed_at: null,
   })
 })
 
@@ -39,7 +52,7 @@ describe('primary navigation', () => {
     expect(links.map((link) => link.textContent)).toEqual(['Knowledge', 'Conversations', 'Analytics'])
   })
 
-  it('reaches Knowledge, Conversations, and Analytics from primary navigation, each rendering its placeholder', async () => {
+  it('reaches Knowledge, Conversations, and Analytics from primary navigation', async () => {
     const user = userEvent.setup()
     await login(user)
 
