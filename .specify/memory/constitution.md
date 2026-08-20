@@ -1,60 +1,65 @@
 <!--
 Sync Impact Report
-Version change: 3.1.1 → 4.0.0
-Rationale: MAJOR — Principle II is redefined from "Tenancy Posture
-  (Single-Tenant MVP)", which forbade tenant tables/columns/middleware
-  outright, into "Multi-Tenant Isolation by Default (NON-NEGOTIABLE)",
-  which now mandates tenant isolation as a security default. This reverses
-  the principle's substantive rule (previously: tenant infrastructure is
-  forbidden without a future amendment; now: tenant isolation is required
-  wherever tenant-owned resources exist) rather than merely clarifying it,
-  which the versioning policy classifies as MAJOR ("redefinition of a
-  principle"). Feature 009 (Admin Platform Foundation & Tenant Boundary)
-  is the concrete trigger: it introduces the platform's first real Tenant
-  entity, tenant-owned Administrators, and tenant-scoped authorization.
+Version change: 4.0.0 → 4.1.0
+Rationale: MINOR — Principle XIV (Approved MVP Technology Stack) is
+  materially expanded, not redefined: its core substantive rule ("a fixed,
+  named stack; anything outside it requires a constitution amendment")
+  is unchanged and is in fact the exact mechanism this amendment exercises.
+  OpenTelemetry is added to the approved stack as the vendor-neutral
+  tracing/observability standard, and Phoenix is approved narrowly as the
+  first optional operator/developer local-development OTLP backend reached
+  only through OpenTelemetry — both scoped by new explicit boundary rules
+  (observability must never participate in application decisions; backend
+  unavailability must never affect public chat). Principle IX (Privacy and
+  Logging) gains a new paragraph extending its existing privacy-by-default
+  posture to observability/OTLP export specifically. Neither principle's
+  prior rule is weakened, narrowed, or reversed — both are extended to
+  cover a new mechanism this project didn't have before, which the
+  versioning policy classifies as MINOR ("a new principle or materially
+  expanded section is added"). Feature 012 (LLM / RAG Observability) is
+  the concrete trigger: its plan identified that OpenTelemetry/Phoenix are
+  not on Principle XIV's current list, and Principle XIV's own text
+  requires an explicit amendment (not a plan-level justification) before
+  a technology outside that list may be used.
 Modified principles:
-  - II. Tenancy Posture (Single-Tenant MVP) → II. Multi-Tenant Isolation
-    by Default (NON-NEGOTIABLE) — full redefinition. Old rule: the MVP
-    MUST NOT implement `organization_id` columns, tenant tables, tenant
-    middleware, tenant-aware retrieval, or cross-tenant authorization, and
-    multi-tenancy required a future constitution amendment before any of
-    that could be built. New rule: tenant is a first-class security
-    boundary; every tenant-owned resource and tenant-scoped operation
-    must derive tenant context server-side, enforce isolation on every
-    query/mutation, fail closed on cross-tenant access, avoid leaking
-    another tenant's existence in error responses, and carry automated
-    cross-tenant isolation test coverage. Albertos remains tenant #1 and
-    the reference implementation, but reusable platform code must not
-    assume it is the only tenant. The new principle explicitly does not
-    require every existing single-tenant entity to become multi-tenant
-    retroactively — tenant ownership is introduced per-entity when that
-    entity joins the reusable platform/customer boundary — and it
-    distinguishes tenant administration from any future cross-tenant
-    platform-admin capability, which must be explicitly authorized rather
-    than arising from a bypassed tenant filter.
-Other sections updated for consistency with the redefined Principle II
-(no other principle's substance changed):
-  - MVP Scope Boundaries — removed the "Multi-tenancy / organization
-    abstractions... MUST NOT be speculatively implemented" bullet from
-    "Explicitly not built"; added a "Mandatory now" bullet requiring
-    tenant isolation wherever a resource/operation is tenant-owned,
-    starting with Feature 009's Tenant and Administrator entities; added
-    an "Explicitly deferrable" bullet clarifying that pre-existing
-    single-tenant resources (Knowledge, Conversations, Usage) are not
-    retroactively tenant-owned by this amendment alone.
-  - Development Workflow & Quality Gates — the reviewer instruction to
-    flag any PR that introduces tenant concepts without an amendment is
-    replaced with an instruction to verify tenant isolation is correctly
-    derived server-side, enforced per query/mutation, and test-covered.
-  - Governance / Compliance review — Principle II added to the
-    critical-severity scrutiny list (alongside I, III, V, VI, X, XI); the
-    "flag speculative multi-tenancy infrastructure" instruction replaced
-    with "verify tenant isolation enforcement and flag client-trusted
-    tenant identifiers."
-Added principles/sections: none (principle count unchanged at XIV;
-  Principle II retitled and redefined in place).
-Removed sections: the single-tenant data-flow ASCII diagram previously
-  inside Principle II (no longer accurate).
+  - XIV. Approved MVP Technology Stack — expanded, not renamed. Added
+    OpenTelemetry to the approved stack list; added a new "Observability
+    boundary" paragraph defining what OpenTelemetry may be used for, that
+    it must remain strictly an observation mechanism, and that telemetry-
+    backend availability must never become a runtime dependency for
+    public chat; added a new paragraph narrowly approving Phoenix as an
+    optional, operator/developer-only, OTLP-reached, replaceable local
+    backend, and explicitly declining to approve Langfuse (or any backend)
+    as a required dependency or to approve any vendor-specific tracing SDK
+    inside application/domain code.
+  - IX. Privacy and Logging — expanded, not renamed. Added a new
+    "Observability data" paragraph applying this principle's existing
+    privacy-by-default posture to OpenTelemetry/OTLP export specifically:
+    no automatic export of secrets/credentials/tokens/raw embedding
+    vectors/hidden model reasoning under any configuration, and no
+    default export of full visitor question, assistant answer, retrieved
+    document/chunk, or assembled prompt content — richer content capture
+    for development diagnostics requires explicit, separate,
+    off-by-default configuration.
+Other sections updated for consistency with the above (no other
+  principle's substance changed):
+  - MVP Scope Boundaries — added an "Explicitly deferrable" bullet noting
+    the optional local observability backend (Phoenix) is never required
+    for any normal development or production path; added an "Explicitly
+    not built" bullet naming LangChain, LangGraph, Grafana, Prometheus,
+    Langfuse-as-a-required-platform, production alerting infrastructure,
+    and customer-facing trace access as out of scope for this amendment.
+  - Development Workflow & Quality Gates — added an instruction that a
+    reviewer touching tracing/observability code MUST verify the
+    Principle XIV observability boundary (no influence on application
+    decisions, no new runtime dependency for public chat) and Principle
+    IX's export-content defaults are intact.
+  - Governance / Compliance review — Principle IX added to the
+    critical-severity scrutiny list alongside I, II, III, V, VI, X, XI,
+    since observability export is now an explicit, named data-leak
+    surface this constitution governs.
+Added principles/sections: none (principle count unchanged at XIV).
+Removed sections: none.
 Deferred TODOs: none.
 -->
 
@@ -258,9 +263,25 @@ unauthorized access attempts, document access, admin actions) MUST be
 auditable. Logs MUST retain enough context to debug an issue without
 exposing customer content. Logging MUST be privacy-conscious by default,
 not as an afterthought.
+
+**Observability data** (added by this amendment, Feature
+012-rag-observability): the same privacy-by-default posture applies to any
+data exported through OpenTelemetry/OTLP (Principle XIV), not only to
+conventional application logs. Observability instrumentation MUST NOT
+automatically export secrets, credentials, authentication tokens, raw
+embedding vector values, or hidden model reasoning / chain-of-thought
+content, under any configuration. The full text of a visitor's question, an
+assistant's answer, retrieved document/chunk content, or assembled prompt
+content MUST NOT be exported by default; enabling richer content capture
+for controlled development diagnostics MUST require explicit, separate,
+off-by-default configuration — never an implicit consequence of enabling
+tracing itself.
 **Rationale**: Logs are frequently the least-protected data store in a
 system; treating them with the same care as the primary database prevents
-them from becoming the leak vector.
+them from becoming the leak vector. A trace exported to an external
+observability backend is exactly this same risk in a new shape — often
+leaving the system boundary entirely — so it inherits this principle's
+rules rather than being treated as a separate, unregulated data channel.
 
 ### X. Cost Safety Is a Security Requirement (NON-NEGOTIABLE)
 The public chatbot endpoint creates direct financial exposure, because
@@ -344,16 +365,62 @@ building out infrastructure for scenarios the project doesn't yet have.
 ### XIV. Approved MVP Technology Stack
 The MVP is built on: Python, FastAPI, PostgreSQL, pgvector, SQLAlchemy,
 Alembic, Claude (via the Anthropic API as the likely initial LLM transport,
-behind the Principle V interface), Docker / Docker Compose, and `uv` for
-Python dependency management. No cloud hosting provider is fixed for the
-MVP. Introducing a technology outside this list, or committing to a
-specific cloud provider, requires an explicit amendment to this
-constitution (see Governance), justified by a concrete requirement this
-stack cannot meet.
+behind the Principle V interface), Docker / Docker Compose, `uv` for Python
+dependency management, and OpenTelemetry as the vendor-neutral standard for
+application/LLM-pipeline tracing and observability. No cloud hosting
+provider is fixed for the MVP. Introducing a technology outside this list,
+or committing to a specific cloud provider, requires an explicit amendment
+to this constitution (see Governance), justified by a concrete requirement
+this stack cannot meet.
+
+**Observability boundary** (added by this amendment, Feature
+012-rag-observability): OpenTelemetry MAY be used for distributed/
+application tracing, LLM/RAG pipeline tracing, span attributes and events,
+OTLP export, and request correlation via `request_id`/`trace_id`. It MUST
+remain strictly an observation mechanism: no RAG, security, authorization,
+tenant-resolution, answerability, provider-selection, or cost/abuse-
+enforcement decision MUST depend on, or be influenced by, whether tracing
+is enabled or whether its backend is reachable — that behavior MUST be
+identical in every case. Telemetry-backend availability MUST NEVER become
+a runtime dependency for the public chat endpoint: an unavailable or
+misconfigured observability backend MUST NOT make `/api/v1/chat`
+unavailable, trigger a retry of an LLM call, cause an additional paid
+provider call, or alter the public response in any way. Tracing/export
+failures MUST fail open with respect to telemetry — the trace is simply
+lost — while every other application, security, and business behavior
+proceeds exactly as if the observability backend did not exist.
+
+Phoenix is approved narrowly as the initial optional operator/developer
+local-development observability backend, reached only through
+OpenTelemetry's OTLP export — never through a Phoenix-specific SDK or API
+called from domain/application code. Phoenix MUST remain: optional (never
+required for `docker compose up` or any other normal development or
+production path), operator- and developer-facing only (never part of the
+public API, never part of the tenant-admin API, never customer-facing), and
+replaceable by any other OTLP-compatible backend without an
+application/domain-code change. This amendment does not approve Langfuse,
+or any other tracing backend, as a required dependency; a future alternate
+or additional OTLP backend remains an implementation-level choice, not a
+constitutional one, precisely because application code only ever depends on
+the OpenTelemetry/OTLP boundary. No vendor-specific tracing SDK — Phoenix-
+specific, Langfuse-specific, or otherwise — MUST be imported or called from
+application/domain-layer code; only the OpenTelemetry API MUST be used
+there.
 **Rationale**: A fixed, named stack keeps the MVP's surface area small and
 predictable, which directly supports Principle XIII (Simplicity) and makes
 security review tractable, while leaving LLM/embedding/hosting choices
-open per Principles V–VII.
+open per Principles V–VII. OpenTelemetry is added under the same logic
+that already governs Principles V–VII: it is a vendor-neutral standard, not
+a specific backend, so approving it does not commit the project to Phoenix,
+Langfuse, or any other vendor any more than approving "an LLM Protocol
+interface" commits the project to Anthropic. Phoenix is approved only as
+narrowly as the current concrete need (local RAG-trace visualization for
+one developer) actually requires, exactly as Principle XIII demands of any
+new dependency — and the explicit "must never affect chat" and "must never
+become a runtime dependency" rules exist because this is the first
+dependency this constitution has approved that sits on the request path of
+every single `/chat` call without being one of the things that call
+actually needs to succeed.
 
 ## Separation of Concerns
 
@@ -443,6 +510,12 @@ Explicitly not built for the MVP (MUST NOT be speculatively implemented):
   repositories, abstract base classes, dependency-injection layers, generic
   frameworks, plugin systems, event buses, or domain abstractions not
   justified by a concrete current requirement.
+- LangChain, LangGraph, Grafana, Prometheus, Langfuse as a required
+  platform, production alerting infrastructure, and customer-facing or
+  tenant-admin-facing trace access (Principle XIV's Observability
+  boundary) — none of these are approved by the Feature 012 amendment;
+  each remains a possible future, separately-justified addition, not part
+  of the current approved stack.
 
 Explicitly deferrable (MUST be designed for or kept swappable, MAY be
 decided/implemented later):
@@ -475,6 +548,10 @@ decided/implemented later):
   into customer-facing, tenant-scoped administration says so (e.g., a
   future Knowledge Base Administration feature) — this amendment mandates
   the isolation *rule*, not an immediate migration of every table.
+- The optional local observability backend (Phoenix, Principle XIV) — it
+  is never required for `docker compose up`, any other normal development
+  path, or any production path; running it is a deliberate, separate,
+  opt-in operator action, not a default.
 
 Anything not listed above as deferrable is a mandatory invariant and MUST
 NOT be postponed by a feature plan or task list.
@@ -515,11 +592,18 @@ cross-tenant access, and includes automated cross-tenant isolation test
 coverage (Principle II) — and MUST flag any tenant-scoped code path that
 trusts a client-supplied tenant identifier from a request body, query
 parameter, or header. Any pull request touching the public chat endpoint
-MUST demonstrate that cost/abuse controls (Principle X) remain intact.
-Complexity that deviates from Principle XII (Engineering Quality),
-Principle XIII (Simplicity), or Principle XIV (Approved Technology Stack)
-MUST be explicitly justified in the PR description or plan, referencing
-the concrete requirement that demands it.
+MUST demonstrate that cost/abuse controls (Principle X) remain intact. A
+reviewer touching tracing/observability code MUST verify the Principle XIV
+Observability boundary — no application decision is influenced by whether
+tracing is enabled or reachable, and no observability-backend failure can
+affect `/api/v1/chat` — and MUST verify Principle IX's observability
+export-content defaults (no secrets, credentials, raw embedding vectors,
+hidden model reasoning, or full question/answer/document/prompt content
+exported unless a separate, explicit, off-by-default setting was
+deliberately enabled) are intact. Complexity that deviates from Principle
+XII (Engineering Quality), Principle XIII (Simplicity), or Principle XIV
+(Approved Technology Stack) MUST be explicitly justified in the PR
+description or plan, referencing the concrete requirement that demands it.
 
 ## Governance
 
@@ -536,18 +620,24 @@ prior informal convention. Amendments are made by editing this file via the
 
 **Compliance review**: Every `/speckit-plan` and `/speckit-tasks` output for
 this project MUST be evaluated against these principles, with particular
-scrutiny on Principles I, II, III, V, VI, X, and XI, since violations there
-(secrets exposure, tenant-isolation bypass, prompt-injection escalation,
-core logic coupled directly to a specific LLM/embedding/cloud SDK,
-uncontrolled cost exposure, missing access-control tests) are treated as
-critical severity. For Principle II (Multi-Tenant Isolation by Default)
+scrutiny on Principles I, II, III, V, VI, IX, X, and XI, since violations
+there (secrets exposure, tenant-isolation bypass, prompt-injection
+escalation, core logic coupled directly to a specific LLM/embedding/cloud
+SDK, uncontrolled cost exposure, missing access-control tests,
+observability data leaking sensitive content) are treated as critical
+severity. For Principle II (Multi-Tenant Isolation by Default)
 specifically, reviewers MUST verify that tenant context is always derived
 server-side, that every tenant-scoped query and mutation enforces
 isolation, that cross-tenant access fails closed, and that automated
 cross-tenant isolation tests exist for every tenant-owned resource — and
 MUST flag any code path that would let a client-supplied tenant identifier
-influence which tenant's data a request can reach. Any exception MUST be
-documented in the relevant plan's Complexity Tracking section with a
+influence which tenant's data a request can reach. For Principle XIV's
+Observability boundary specifically, reviewers MUST flag any application/
+domain-layer import of a vendor-specific tracing SDK (Phoenix, Langfuse, or
+otherwise) in place of the OpenTelemetry API, and any code path where an
+application decision or the public chat response could differ depending on
+whether tracing is enabled or its backend is reachable. Any exception MUST
+be documented in the relevant plan's Complexity Tracking section with a
 concrete justification, not merely noted and left unresolved.
 
-**Version**: 4.0.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-19
+**Version**: 4.1.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-20
