@@ -128,8 +128,32 @@ services:
       ollama-init:
         condition: service_completed_successfully
 
+  # Optional local trace-visualization backend (feature
+  # 012-rag-observability, research.md R10). Gated behind the
+  # `observability` Compose profile — NOT part of the default
+  # `docker compose up -d` set (FR-036, FR-037): `app` never depends on
+  # this service, and OBSERVABILITY_ENABLED defaults to false regardless
+  # of whether it happens to be running. Start it explicitly with:
+  #   docker compose --profile observability up -d phoenix
+  # UI + OTLP/HTTP collector on 6006 (this project's exporter uses
+  # OTLP/HTTP — research.md R3); OTLP/gRPC on 4317 is exposed too, unused
+  # by this project's own exporter but harmless for a local-only
+  # container. See specs/012-rag-observability/quickstart.md for the full
+  # walkthrough.
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    restart: unless-stopped
+    profiles: ["observability"]
+    ports:
+      - "6006:6006"
+      - "4317:4317"
+    volumes:
+      - phoenix-data:/mnt/data
+
 volumes:
   db-data:
     name: shiruno_db-data
   ollama-data:
     name: shiruno_ollama-data
+  phoenix-data:
+    name: shiruno_phoenix-data

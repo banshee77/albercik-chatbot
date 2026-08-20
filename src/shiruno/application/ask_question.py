@@ -43,6 +43,19 @@ function already computes internally for `_record_usage()`/the budget
 check, now also returned so `record_conversation()` can snapshot it onto a
 `ConversationRecord`. No new decision logic: each field is populated with
 whatever is actually known at that return site, `None` otherwise.
+
+Feature 012-rag-observability (research.md R5-R7) adds a `tracer:
+Tracer` parameter and wraps each stage boundary above in
+`infra.observability.traced_stage()`, purely additively: every
+`traced_stage()` call is a structural no-op when tracing is disabled
+(research.md R1), and no branch, return value, or outcome below depends on
+whether `tracer` is a real or no-op `Tracer` (FR-034). The one exception to
+"span boundaries mirror the list above exactly" is `security_or_cost_gates`
+vs. the concurrency guard: a concurrency-limit rejection is deliberately
+NOT given its own child span (see the inline comment at that call site) to
+avoid either re-opening an already-closed span or acquiring the
+concurrency slot earlier than this code already does — the latter would
+change request-rejection behavior under load, which tracing must never do.
 """
 
 import time
@@ -50,6 +63,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Literal
 
+from opentelemetry.trace import StatusCode, Tracer
 from sqlalchemy.orm import Session
 
 from shiruno.api.errors import RateLimitedError
@@ -59,6 +73,7 @@ from shiruno.domain.scope import is_albertos_scope
 from shiruno.domain.small_talk import classify_small_talk, small_talk_reply
 from shiruno.infra.budget import check_llm_budget
 from shiruno.infra.concurrency import ChatConcurrencyGuard
+from shiruno.infra.observability import safe_set_attribute, safe_set_status, traced_stage
 from shiruno.infra.rate_limit import check_and_increment
 from shiruno.persistence.models import ProviderKind, ProviderName, UsageRecord
 from shiruno.persistence.repositories import search_similar_chunks
@@ -106,6 +121,12 @@ class ChatSafetyConfig:
     llm_enabled: bool
     budget_max_llm_requests_per_hour: int
     max_context_chars: int
+    # Feature 012-rag-observability (research.md R4, FR-017): two
+    # independent, off-by-default content-capture toggles, threaded
+    # through the same way every other safety setting is — never read
+    # directly from `get_settings()` inside this module.
+    capture_question_answer_content: bool = False
+    capture_document_prompt_content: bool = False
 
 
 def _record_usage(
@@ -159,29 +180,35 @@ def ask_question(
     rate_limit_source_key: str,
     concurrency_guard: ChatConcurrencyGuard,
     request_id: uuid.UUID,
+    tracer: Tracer,
 ) -> AskQuestionResult:
-    # --- rate limit ---
-    rate_result = check_and_increment(
-        session, source_key=rate_limit_source_key, limit_per_minute=safety.rate_limit_per_minute
-    )
-    if not rate_result.allowed:
-        raise RateLimitedError(headers={"Retry-After": str(rate_result.retry_after_seconds)})
-
-    # --- LLM kill switch + budget (fail closed) ---
-    budget_result = check_llm_budget(
-        session,
-        llm_enabled=safety.llm_enabled,
-        llm_provider_name=llm_provider_name,
-        max_requests_per_hour=safety.budget_max_llm_requests_per_hour,
-    )
-    if not budget_result.allowed:
-        return AskQuestionResult(
-            outcome="unavailable",
-            answer=_UNAVAILABLE_MESSAGE,
-            failure_category=budget_result.reason,
+    # --- rate limit + LLM kill switch + budget (fail closed) ---
+    with traced_stage(tracer, "shiruno.security_or_cost_gates") as gates_span:
+        rate_result = check_and_increment(
+            session, source_key=rate_limit_source_key, limit_per_minute=safety.rate_limit_per_minute
         )
+        if not rate_result.allowed:
+            safe_set_status(gates_span, StatusCode.ERROR, "rate_limited")
+            raise RateLimitedError(headers={"Retry-After": str(rate_result.retry_after_seconds)})
+
+        budget_result = check_llm_budget(
+            session,
+            llm_enabled=safety.llm_enabled,
+            llm_provider_name=llm_provider_name,
+            max_requests_per_hour=safety.budget_max_llm_requests_per_hour,
+        )
+        if not budget_result.allowed:
+            safe_set_status(gates_span, StatusCode.ERROR, budget_result.reason)
+            return AskQuestionResult(
+                outcome="unavailable",
+                answer=_UNAVAILABLE_MESSAGE,
+                failure_category=budget_result.reason,
+            )
 
     # --- concurrency guard (paid LLM calls) ---
+    # See module docstring: a concurrency-limit rejection is reflected only
+    # via the root shiruno.chat span's shiruno.failure_category attribute
+    # (chat.py), not a dedicated child span here.
     with concurrency_guard.try_acquire() as acquired:
         if not acquired:
             return AskQuestionResult(
@@ -192,19 +219,34 @@ def ask_question(
 
         # --- small-talk short-circuit (feature 007; must run after every
         # safeguard above, unchanged, and before scope/retrieval/LLM) ---
-        small_talk_category = classify_small_talk(question)
+        with traced_stage(tracer, "shiruno.small_talk_classification") as small_talk_span:
+            small_talk_category = classify_small_talk(question)
+            safe_set_attribute(
+                small_talk_span, "shiruno.small_talk", small_talk_category is not None
+            )
         if small_talk_category is not None:
             return AskQuestionResult(
                 outcome="small_talk", answer=small_talk_reply(small_talk_category)
             )
 
         # --- scope evaluation ---
-        if not is_albertos_scope(question):
+        with traced_stage(tracer, "shiruno.scope_classification") as scope_span:
+            in_scope = is_albertos_scope(question)
+            safe_set_attribute(scope_span, "shiruno.in_scope", in_scope)
+        if not in_scope:
             return AskQuestionResult(outcome="out_of_scope", answer=_OUT_OF_SCOPE_MESSAGE)
 
         # --- embedding / retrieval ---
         embed_start = time.monotonic()
-        query_embedding = embedding_provider.embed_query(question)
+        with traced_stage(tracer, "shiruno.query_embedding") as embedding_span:
+            safe_set_attribute(
+                embedding_span,
+                "shiruno.embedding.provider",
+                ProviderName.local_sentence_transformer.value,
+            )
+            safe_set_attribute(embedding_span, "shiruno.embedding.model", embedding_model_name)
+            safe_set_attribute(embedding_span, "shiruno.embedding.text_count", 1)
+            query_embedding = embedding_provider.embed_query(question)
         embed_latency_ms = int((time.monotonic() - embed_start) * 1000)
         # One row for this batched passage-embedding call (T065) —
         # operational visibility only (Design Constraint 3): local
@@ -227,10 +269,40 @@ def ask_question(
             latency_ms=embed_latency_ms,
         )
 
-        candidates = search_similar_chunks(session, query_embedding, top_k=top_k)
-        grounding_chunks = select_sufficient_chunks(
-            candidates, relevance_threshold=relevance_threshold
-        )
+        with traced_stage(tracer, "shiruno.retrieval") as retrieval_span:
+            safe_set_attribute(retrieval_span, "shiruno.retrieval.top_k", top_k)
+            safe_set_attribute(
+                retrieval_span, "shiruno.retrieval.relevance_threshold", relevance_threshold
+            )
+            candidates = search_similar_chunks(session, query_embedding, top_k=top_k)
+            grounding_chunks = select_sufficient_chunks(
+                candidates, relevance_threshold=relevance_threshold
+            )
+            safe_set_attribute(retrieval_span, "shiruno.retrieval.candidate_count", len(candidates))
+            safe_set_attribute(
+                retrieval_span, "shiruno.retrieval.passed_filter_count", len(grounding_chunks)
+            )
+            safe_set_attribute(
+                retrieval_span,
+                "shiruno.retrieval.selected.document_ids",
+                [str(chunk.document_id) for chunk in grounding_chunks],
+            )
+            safe_set_attribute(
+                retrieval_span,
+                "shiruno.retrieval.selected.similarities",
+                [chunk.similarity for chunk in grounding_chunks],
+            )
+            safe_set_attribute(
+                retrieval_span,
+                "shiruno.retrieval.selected.labels",
+                [chunk.document_label for chunk in grounding_chunks],
+            )
+            if safety.capture_document_prompt_content:
+                safe_set_attribute(
+                    retrieval_span,
+                    "shiruno.retrieval.selected.contents",
+                    [chunk.content for chunk in grounding_chunks],
+                )
 
         if not grounding_chunks:
             return AskQuestionResult(
@@ -238,38 +310,70 @@ def ask_question(
             )
 
         # --- context size limit (before the LLM call) ---
-        limited_chunks = limit_context_chars(
-            grounding_chunks, max_context_chars=safety.max_context_chars
-        )
+        with traced_stage(tracer, "shiruno.context_assembly") as context_span:
+            limited_chunks = limit_context_chars(
+                grounding_chunks, max_context_chars=safety.max_context_chars
+            )
+            prompt = assemble_prompt(question, limited_chunks)
+            safe_set_attribute(
+                context_span,
+                "shiruno.context.truncated",
+                len(limited_chunks) < len(grounding_chunks),
+            )
+            safe_set_attribute(
+                context_span, "shiruno.context.selected_chunk_count", len(limited_chunks)
+            )
+            safe_set_attribute(
+                context_span,
+                "shiruno.context.char_count",
+                sum(len(chunk.content) for chunk in limited_chunks),
+            )
+            if safety.capture_document_prompt_content:
+                safe_set_attribute(context_span, "shiruno.context.prompt", prompt.system_prompt)
 
         # --- LLM call ---
-        prompt = assemble_prompt(question, limited_chunks)
         llm_start = time.monotonic()
-        try:
-            result = llm_provider.complete(
-                system_prompt=prompt.system_prompt,
-                user_message=prompt.user_message,
-                max_tokens=max_answer_tokens,
-            )
-        except LLMProviderError:
-            _record_usage(
-                session,
-                request_id=request_id,
-                provider_kind=ProviderKind.llm,
-                provider_name=ProviderName(llm_provider_name),
-                provider_model=llm_model_name,
-                input_tokens=None,
-                output_tokens=None,
-                success=False,
-                latency_ms=int((time.monotonic() - llm_start) * 1000),
-            )
-            return AskQuestionResult(
-                outcome="unavailable",
-                answer=_UNAVAILABLE_MESSAGE,
-                failure_category="provider_error",
-                provider_name=llm_provider_name,
-                provider_model=llm_model_name,
-            )
+        with traced_stage(tracer, "shiruno.llm_generation") as llm_span:
+            safe_set_attribute(llm_span, "shiruno.llm.provider", llm_provider_name)
+            safe_set_attribute(llm_span, "shiruno.llm.model", llm_model_name)
+            try:
+                result = llm_provider.complete(
+                    system_prompt=prompt.system_prompt,
+                    user_message=prompt.user_message,
+                    max_tokens=max_answer_tokens,
+                )
+            except LLMProviderError:
+                safe_set_status(llm_span, StatusCode.ERROR, "provider_error")
+                _record_usage(
+                    session,
+                    request_id=request_id,
+                    provider_kind=ProviderKind.llm,
+                    provider_name=ProviderName(llm_provider_name),
+                    provider_model=llm_model_name,
+                    input_tokens=None,
+                    output_tokens=None,
+                    success=False,
+                    latency_ms=int((time.monotonic() - llm_start) * 1000),
+                )
+                return AskQuestionResult(
+                    outcome="unavailable",
+                    answer=_UNAVAILABLE_MESSAGE,
+                    failure_category="provider_error",
+                    provider_name=llm_provider_name,
+                    provider_model=llm_model_name,
+                )
+
+            safe_set_attribute(llm_span, "shiruno.llm.model", result.model)
+            safe_set_attribute(llm_span, "shiruno.llm.supported", result.supported)
+            safe_set_attribute(llm_span, "shiruno.llm.latency_ms", result.latency_ms)
+            if result.input_tokens is not None:
+                safe_set_attribute(llm_span, "shiruno.llm.input_tokens", result.input_tokens)
+            if result.output_tokens is not None:
+                safe_set_attribute(llm_span, "shiruno.llm.output_tokens", result.output_tokens)
+            for key, value in (result.provider_metrics or {}).items():
+                safe_set_attribute(llm_span, f"shiruno.llm.provider_metrics.{key}", value)
+            if safety.capture_question_answer_content and result.supported:
+                safe_set_attribute(llm_span, "shiruno.llm.answer", result.answer)
 
         # --- usage accounting ---
         _record_usage(

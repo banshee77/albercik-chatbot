@@ -28,16 +28,27 @@ Every operational field on the row is an immutable, at-write-time snapshot
 of `AskQuestionResult` — never recomputed later from current
 `KnowledgeDocument` state or current provider configuration (research.md
 §2a).
+
+Feature 012-rag-observability (research.md R8): the caller (`chat.py`)
+already has the `shiruno.conversation_recording` span open around this
+call, so it is passed in explicitly (`span`) rather than resolved via
+OpenTelemetry's implicit "current span" context — consistent with this
+feature's DI-everywhere approach (research.md R1). `shiruno.tenant_id`/
+`.tenant_slug` are set here, once the tenant actually resolves, since this
+is the one place tenant resolution genuinely happens; when it does not
+resolve, no tenant attribute is set at all (never fabricated, FR-029).
 """
 
 import uuid
 
+from opentelemetry.trace import Span
 from sqlalchemy.orm import Session
 
 from shiruno.application.ask_question import AskQuestionResult
 from shiruno.application.resolve_public_tenant import resolve_public_tenant
 from shiruno.domain.question_normalization import normalize_question
 from shiruno.infra.logging import get_logger
+from shiruno.infra.observability import safe_set_attribute
 from shiruno.persistence.models import ConversationOutcome, ConversationRecord, ProviderName
 
 logger = get_logger(__name__)
@@ -51,6 +62,8 @@ def record_conversation(
     question: str,
     result: AskQuestionResult,
     latency_ms: int,
+    span: Span,
+    capture_question_answer_content: bool = False,
 ) -> None:
     tenant = resolve_public_tenant(session, slug=tenant_slug)
     if tenant is None:
@@ -59,6 +72,11 @@ def record_conversation(
             extra={"configured_slug": tenant_slug},
         )
         return
+
+    safe_set_attribute(span, "shiruno.tenant_id", tenant.id)
+    safe_set_attribute(span, "shiruno.tenant_slug", tenant.slug)
+    if capture_question_answer_content:
+        safe_set_attribute(span, "shiruno.question", question)
 
     with session.begin_nested():
         session.add(

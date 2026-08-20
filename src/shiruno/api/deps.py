@@ -16,6 +16,7 @@ caller about which case applied (FR-008).
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from opentelemetry.trace import Tracer
 from sqlalchemy.orm import Session
 
 from shiruno.api.errors import PayloadTooLargeError, UnauthorizedError
@@ -63,6 +64,14 @@ def get_llm_model_name(request: Request) -> str:
 def get_chat_concurrency_guard(request: Request) -> ChatConcurrencyGuard:
     guard: ChatConcurrencyGuard = request.app.state.chat_concurrency_guard
     return guard
+
+
+def get_tracer(request: Request) -> Tracer:
+    """The single `Tracer` built once at `create_app()` time (feature
+    012-rag-observability, research.md R1) — a no-op `Tracer` when
+    observability is disabled, never re-derived or branched-on here."""
+    tracer: Tracer = request.app.state.tracer
+    return tracer
 
 
 def require_bounded_request_body(request: Request) -> None:

@@ -217,6 +217,30 @@ class Settings(BaseSettings):
     # Assumptions) — avoids scanning unlimited history by default.
     ANALYTICS_DEFAULT_LOOKBACK_DAYS: int = 30
 
+    # --- Observability (feature 012-rag-observability, research.md R4) ---
+
+    # Disabled by default (FR-002) — never client-controlled, never
+    # influences chat behavior regardless of value (constitution Principle
+    # XIV's Observability boundary).
+    OBSERVABILITY_ENABLED: bool = False
+    OTEL_SERVICE_NAME: str = "shiruno"
+    # Full traces endpoint URL, e.g. http://phoenix:6006/v1/traces. Empty
+    # while OBSERVABILITY_ENABLED is true means tracing stays a no-export
+    # no-op rather than crashing startup (FR-004).
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+    # Raw `key1=value1,key2=value2` form matching the upstream
+    # OTEL_EXPORTER_OTLP_HEADERS env var convention. Never logged (FR-005).
+    OTEL_EXPORTER_OTLP_HEADERS: str = ""
+    # 1.0 favors complete local-dev visibility (spec Assumptions); a
+    # production operator sets this explicitly (FR-035).
+    OTEL_TRACE_SAMPLE_RATE: float = 1.0
+    # Two independent, off-by-default content-capture toggles (FR-017,
+    # spec Clarifications 2026-08-20) — an operator with tracing-backend
+    # access has no tenant boundary, so visitor question/answer content is
+    # kept separate from retrieved document/prompt content.
+    OBSERVABILITY_CAPTURE_QUESTION_ANSWER_CONTENT: bool = False
+    OBSERVABILITY_CAPTURE_DOCUMENT_PROMPT_CONTENT: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:

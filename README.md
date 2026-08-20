@@ -196,6 +196,42 @@ instead, set `LLM_PROVIDER=anthropic` and a real `ANTHROPIC_API_KEY` in
 `.env`, then `docker compose up -d app` to restart with it — no code
 change required either way.
 
+### Observability (RAG tracing)
+
+Optional and disabled by default — a plain `docker compose up -d` above is
+completely unaffected by any of this (feature 012-rag-observability). See
+[`specs/012-rag-observability/quickstart.md`](specs/012-rag-observability/quickstart.md)
+for the full walkthrough; short version:
+
+```bash
+# 1. Start the optional local trace-visualization backend (Phoenix):
+docker compose --profile observability up -d phoenix
+# UI: http://localhost:6006
+
+# 2. Enable tracing in .env, then restart app:
+#   OBSERVABILITY_ENABLED=true
+#   OTEL_EXPORTER_OTLP_ENDPOINT=http://phoenix:6006/v1/traces
+docker compose up -d app
+
+# 3. Send a request, then find its trace in Phoenix by request_id:
+curl -s -X POST localhost:8000/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Jakie są godziny treningów?"}' | jq -r .request_id
+```
+
+Open the Phoenix UI, browse the `shiruno` project's traces, and filter by
+the `shiruno.request_id` attribute using the id printed above — its root
+`shiruno.chat` span shows every pipeline stage that actually ran (gates,
+classification, retrieval, generation, recording), each with timing; the
+`shiruno.retrieval` span shows candidate/selected chunk counts, similarity
+scores, and safe source labels; the `shiruno.llm_generation` span shows
+provider/model/token counts. Full visitor question/answer text and full
+retrieved document/prompt content are never exported by default — enable
+`OBSERVABILITY_CAPTURE_QUESTION_ANSWER_CONTENT`/
+`OBSERVABILITY_CAPTURE_DOCUMENT_PROMPT_CONTENT` (independently) in `.env`
+only for controlled local debugging. `docker compose --profile
+observability down` removes Phoenix without touching the normal stack.
+
 ## Development
 
 ```bash

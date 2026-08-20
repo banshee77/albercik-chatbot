@@ -27,12 +27,14 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from opentelemetry.trace import Tracer
 
 from shiruno.api.errors import register_exception_handlers
 from shiruno.api.routers import admin, analytics, auth, chat, conversations, documents, health
 from shiruno.config import Settings, get_settings
 from shiruno.infra.concurrency import ChatConcurrencyGuard
 from shiruno.infra.logging import configure_logging, get_logger
+from shiruno.infra.observability import configure_observability
 from shiruno.providers.embedding.local_sentence_transformer_provider import (
     LocalSentenceTransformerEmbeddingProvider,
 )
@@ -70,6 +72,7 @@ def create_app(
     *,
     llm_provider: LLMProvider | None = None,
     embedding_provider: EmbeddingProvider | None = None,
+    tracer: Tracer | None = None,
 ) -> FastAPI:
     configure_logging()
     settings = get_settings()
@@ -109,6 +112,14 @@ def create_app(
     # every `/chat` request needs a working guard regardless of which
     # providers are behind it (infra/concurrency.py).
     app.state.chat_concurrency_guard = ChatConcurrencyGuard(limit=settings.CHAT_CONCURRENCY_LIMIT)
+
+    # Constructed once, here, at factory-call time (feature
+    # 012-rag-observability, research.md R1) — a no-op Tracer unless
+    # OBSERVABILITY_ENABLED is true. Deliberately logs only whether
+    # observability is enabled, never the OTLP endpoint or headers
+    # (FR-005, research.md R4).
+    app.state.tracer = tracer or configure_observability(settings)
+    logger.info("Observability enabled: %s", settings.OBSERVABILITY_ENABLED)
 
     app.include_router(health.router)
     app.include_router(chat.router)
