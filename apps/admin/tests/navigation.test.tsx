@@ -3,23 +3,27 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as adminApi from '../src/api/admin'
 import * as authApi from '../src/api/auth'
+import * as conversationsApi from '../src/api/conversations'
 import * as knowledgeApi from '../src/api/knowledge'
 import { renderApp } from './testUtils'
 
 vi.mock('../src/api/auth')
 vi.mock('../src/api/admin')
 vi.mock('../src/api/knowledge')
+vi.mock('../src/api/conversations')
 
 const mockedLogin = vi.mocked(authApi.login)
 const mockedGetMe = vi.mocked(adminApi.getMe)
 const mockedListDocuments = vi.mocked(knowledgeApi.listDocuments)
 const mockedGetKnowledgeHealth = vi.mocked(knowledgeApi.getKnowledgeHealth)
+const mockedListConversations = vi.mocked(conversationsApi.listConversations)
 
 beforeEach(() => {
   mockedLogin.mockReset()
   mockedGetMe.mockReset()
   mockedListDocuments.mockReset()
   mockedGetKnowledgeHealth.mockReset()
+  mockedListConversations.mockReset()
   mockedLogin.mockResolvedValue({ access_token: 'token', token_type: 'bearer', expires_in: 3600 })
   mockedGetMe.mockResolvedValue({
     administrator: { id: 'admin-1', username: 'alice' },
@@ -32,6 +36,7 @@ beforeEach(() => {
     ready_for_chat: false,
     last_indexed_at: null,
   })
+  mockedListConversations.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
 })
 
 async function login(user: ReturnType<typeof userEvent.setup>) {

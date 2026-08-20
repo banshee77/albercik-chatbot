@@ -40,3 +40,63 @@ export interface KnowledgeHealthSummary {
   ready_for_chat: boolean
   last_indexed_at: string | null
 }
+
+export type ConversationOutcome =
+  | 'grounded'
+  | 'insufficient_information'
+  | 'out_of_scope'
+  | 'unavailable'
+  | 'small_talk'
+
+export interface ConversationSummary {
+  id: string
+  request_id: string
+  question: string
+  outcome: ConversationOutcome
+  created_at: string
+  latency_ms: number
+}
+
+export interface ConversationListResponse {
+  items: ConversationSummary[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface ConversationListParams {
+  q?: string
+  outcome?: ConversationOutcome
+  start_date?: string
+  end_date?: string
+  limit?: number
+  offset?: number
+}
+
+export interface ConversationSource {
+  document_id: string
+  label: string
+}
+
+/** Never `provider_metrics` — deliberately excluded (research.md R4, FR-037). */
+export type SafeFailureCategory =
+  | 'provider_error'
+  | 'budget_exceeded'
+  | 'kill_switch'
+  | 'concurrency_limit'
+
+export interface ConversationDetail {
+  id: string
+  request_id: string
+  question: string
+  answer: string
+  outcome: ConversationOutcome
+  created_at: string
+  latency_ms: number
+  sources: ConversationSource[] | null
+  provider_name: string | null
+  provider_model: string | null
+  input_tokens: number | null
+  output_tokens: number | null
+  safe_failure_category: SafeFailureCategory | null
+}

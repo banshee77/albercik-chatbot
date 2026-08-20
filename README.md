@@ -254,7 +254,12 @@ of the backend above and run as its own process in local development.
 `/app/knowledge` (feature 014-knowledge-base-ui) is a functional
 knowledge-management screen — health summary, document list, upload,
 detail, re-index, replace, and delete — consuming the existing Feature 010
-Knowledge API with zero backend changes.
+Knowledge API with zero backend changes. `/app/conversations` (feature
+015-conversations-ui) is a functional, read-only conversation-review
+screen — search, outcome filter, date range, pagination, and an inline
+conversation-detail panel showing question, answer, outcome, historical
+grounded sources, and safe operational metadata — consuming the existing
+Feature 011 Conversations API with zero backend changes.
 
 ```bash
 # 1. Backend: allow the frontend's origin to call it cross-origin.
@@ -283,8 +288,10 @@ npm run build # production static build (dist/)
 ```
 
 See [`specs/013-admin-platform-shell/quickstart.md`](specs/013-admin-platform-shell/quickstart.md)
-for a full manual walkthrough (login, organization identity, placeholder
-navigation, session expiration, logout).
+for a full manual walkthrough (login, organization identity, navigation,
+session expiration, logout), and
+[`specs/015-conversations-ui/quickstart.md`](specs/015-conversations-ui/quickstart.md)
+for the Conversations review screen specifically.
 
 ## Known limitations
 
@@ -452,5 +459,6 @@ specs/007-conversational-chat-ux/                      # small talk, assistant i
 specs/008-shiruno-repository-architecture/             # this rebrand/architecture refactor
 specs/013-admin-platform-shell/                        # apps/admin/ — authenticated shell, placeholder nav
 specs/014-knowledge-base-ui/                           # /app/knowledge — functional knowledge management
+specs/015-conversations-ui/                            # /app/conversations — functional conversation review
 tests/{unit,integration,contract,fakes,fixtures}/
 ```

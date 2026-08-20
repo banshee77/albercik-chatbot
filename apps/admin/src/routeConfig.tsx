@@ -1,7 +1,7 @@
 import { Navigate, type RouteObject } from 'react-router'
 import { AnalyticsPlaceholder } from './routes/AnalyticsPlaceholder'
 import { AppHome } from './routes/AppHome'
-import { ConversationsPlaceholder } from './routes/ConversationsPlaceholder'
+import { ConversationsPage } from './routes/ConversationsPage'
 import { KnowledgePage } from './routes/KnowledgePage'
 import { LoginPage } from './routes/LoginPage'
 import { ProtectedLayout } from './routes/ProtectedLayout'
@@ -15,7 +15,7 @@ export const routeConfig: RouteObject[] = [
     children: [
       { index: true, element: <AppHome /> },
       { path: 'knowledge', element: <KnowledgePage /> },
-      { path: 'conversations', element: <ConversationsPlaceholder /> },
+      { path: 'conversations', element: <ConversationsPage /> },
       { path: 'analytics', element: <AnalyticsPlaceholder /> },
     ],
   },
